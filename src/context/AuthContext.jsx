@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase, DEMO_MODE, mapUser } from '../lib/supabase'
 import { DEMO_USERS } from '../lib/mockData'
 
@@ -7,35 +7,54 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
+  const loadingDone           = useRef(false)   // prevent double setLoading calls
+
+  function finishLoading() {
+    if (!loadingDone.current) {
+      loadingDone.current = true
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
+    // ── Demo mode ─────────────────────────────────────────────────────────────
     if (DEMO_MODE) {
       try {
         const stored = localStorage.getItem('rpm_session')
         if (stored) setUser(JSON.parse(stored))
       } catch { /* ignore */ }
-      setLoading(false)
+      finishLoading()
       return
     }
 
-    // Supabase: check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) await fetchProfile(session.user.id)
-      else setLoading(false)
-    })
+    // ── Safety net: never stay on the spinner longer than 8 seconds ───────────
+    const timeout = setTimeout(() => {
+      console.warn('Auth check timed out — forcing loading to false')
+      finishLoading()
+    }, 8000)
 
-    // Listen for login / logout events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) await fetchProfile(session.user.id)
-      else { setUser(null); setLoading(false) }
-    })
+    // ── Supabase: onAuthStateChange fires for INITIAL_SESSION too ─────────────
+    // No need for a separate getSession() call — this covers everything.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await fetchProfile(session.user.id)
+        } else {
+          setUser(null)
+          finishLoading()
+        }
+      }
+    )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   async function fetchProfile(userId) {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
@@ -43,24 +62,32 @@ export function AuthProvider({ children }) {
 
       if (data) {
         setUser(mapUser(data))
-      } else {
-        // Profile doesn't exist yet — try to create it
-        try {
-          const { data: auth } = await supabase.auth.getUser()
-          if (auth?.user) {
-            const profile = {
-              id:        auth.user.id,
-              email:     auth.user.email,
-              full_name: auth.user.user_metadata?.full_name || auth.user.email.split('@')[0],
-              role:      auth.user.user_metadata?.role || 'student',
-            }
-            const { data: created } = await supabase.from('profiles').upsert(profile).select().single()
-            if (created) setUser(mapUser(created))
-          }
-        } catch { /* profile creation failed — user will see login */ }
+        return
       }
-    } catch { /* fetch failed — user will see login */ }
-    finally { setLoading(false) }
+
+      // Profile doesn't exist yet — try to create it
+      if (error?.code === 'PGRST116') {   // "no rows returned"
+        const { data: auth } = await supabase.auth.getUser()
+        if (auth?.user) {
+          const profile = {
+            id:        auth.user.id,
+            email:     auth.user.email,
+            full_name: auth.user.user_metadata?.full_name || auth.user.email.split('@')[0],
+            role:      auth.user.user_metadata?.role || 'student',
+          }
+          const { data: created } = await supabase
+            .from('profiles')
+            .upsert(profile)
+            .select()
+            .single()
+          if (created) setUser(mapUser(created))
+        }
+      }
+    } catch (err) {
+      console.error('fetchProfile error:', err)
+    } finally {
+      finishLoading()
+    }
   }
 
   async function login(email, password) {
