@@ -34,29 +34,33 @@ export function AuthProvider({ children }) {
   }, [])
 
   async function fetchProfile(userId) {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
+    try {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-    if (data) {
-      setUser(mapUser(data))
-    } else {
-      // Profile doesn't exist yet — create it automatically
-      const { data: auth } = await supabase.auth.getUser()
-      if (auth?.user) {
-        const profile = {
-          id:        auth.user.id,
-          email:     auth.user.email,
-          full_name: auth.user.user_metadata?.full_name || auth.user.email.split('@')[0],
-          role:      auth.user.user_metadata?.role || 'student',
-        }
-        const { data: created } = await supabase.from('profiles').upsert(profile).select().single()
-        if (created) setUser(mapUser(created))
+      if (data) {
+        setUser(mapUser(data))
+      } else {
+        // Profile doesn't exist yet — try to create it
+        try {
+          const { data: auth } = await supabase.auth.getUser()
+          if (auth?.user) {
+            const profile = {
+              id:        auth.user.id,
+              email:     auth.user.email,
+              full_name: auth.user.user_metadata?.full_name || auth.user.email.split('@')[0],
+              role:      auth.user.user_metadata?.role || 'student',
+            }
+            const { data: created } = await supabase.from('profiles').upsert(profile).select().single()
+            if (created) setUser(mapUser(created))
+          }
+        } catch { /* profile creation failed — user will see login */ }
       }
-    }
-    setLoading(false)
+    } catch { /* fetch failed — user will see login */ }
+    finally { setLoading(false) }
   }
 
   async function login(email, password) {
