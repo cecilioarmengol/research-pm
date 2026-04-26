@@ -152,6 +152,7 @@ function useSupabaseData(user) {
           start_date: action.payload.startDate || null,
           deadline: action.payload.deadline || null,
           tags: action.payload.tags || [],
+          team_members: action.payload.teamMembers || [],
         }).select().single()
         if (error || !proj) return
 
@@ -178,12 +179,13 @@ function useSupabaseData(user) {
       }
 
       case 'UPDATE_PROJECT': {
-        const { id, title, description, assignedTo, status, startDate, deadline, tags } = action.payload
+        const { id, title, description, assignedTo, status, startDate, deadline, tags, teamMembers } = action.payload
         await supabase.from('projects').update({
           title, description,
           assigned_to: assignedTo || null,
           status, start_date: startDate || null,
           deadline: deadline || null, tags: tags || [],
+          team_members: teamMembers || [],
           updated_at: new Date().toISOString(),
         }).eq('id', id)
         await loadProjects()

@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
+import { RoleBadge } from '../ui/Badge'
+import Avatar from '../ui/Avatar'
 import Button from '../ui/Button'
 
 const EMPTY = {
   title: '', description: '', assignedTo: '',
-  status: 'not_started', startDate: '', deadline: '', tags: '',
+  status: 'not_started', startDate: '', deadline: '',
+  tags: '', teamMembers: [],
 }
 
 export default function ProjectForm({ initial, onClose }) {
@@ -13,13 +16,33 @@ export default function ProjectForm({ initial, onClose }) {
   const { user }            = useAuth()
   const [form, setForm]     = useState(initial ? {
     ...initial,
-    tags: (initial.tags || []).join(', '),
+    tags:        (initial.tags || []).join(', '),
+    teamMembers: initial.teamMembers || [],
   } : EMPTY)
-  const [error, setError]   = useState('')
-
-  const students = users.filter(u => u.role === 'student' || u.role === 'admin')
+  const [error, setError] = useState('')
 
   function set(field, value) { setForm(f => ({ ...f, [field]: value })) }
+
+  // When lead changes, remove that person from team members (can't be both)
+  function setLead(newLeadId) {
+    setForm(f => ({
+      ...f,
+      assignedTo:  newLeadId,
+      teamMembers: (f.teamMembers || []).filter(id => id !== newLeadId),
+    }))
+  }
+
+  function toggleMember(userId) {
+    setForm(f => {
+      const members = f.teamMembers || []
+      return {
+        ...f,
+        teamMembers: members.includes(userId)
+          ? members.filter(id => id !== userId)
+          : [...members, userId],
+      }
+    })
+  }
 
   function submit(e) {
     e.preventDefault()
@@ -27,6 +50,7 @@ export default function ProjectForm({ initial, onClose }) {
     const payload = {
       ...form,
       tags: form.tags.split(',').map(t => t.trim()).filter(Boolean),
+      teamMembers: form.teamMembers || [],
       createdBy: user.id,
     }
     if (initial) {
@@ -44,6 +68,9 @@ export default function ProjectForm({ initial, onClose }) {
     </div>
   )
 
+  // All users except the currently selected lead
+  const teamCandidates = users.filter(u => u.id !== form.assignedTo)
+
   return (
     <form onSubmit={submit} className="space-y-4">
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
@@ -54,6 +81,7 @@ export default function ProjectForm({ initial, onClose }) {
           value={form.title}
           onChange={e => set('title', e.target.value)}
           placeholder="e.g. SR: Laparoscopic vs Open Cholecystectomy"
+          autoFocus
         />
       )}
 
@@ -68,10 +96,10 @@ export default function ProjectForm({ initial, onClose }) {
       )}
 
       <div className="grid grid-cols-2 gap-4">
-        {field('Assigned To',
-          <select className="input-base" value={form.assignedTo} onChange={e => set('assignedTo', e.target.value)}>
+        {field('Project Lead',
+          <select className="input-base" value={form.assignedTo} onChange={e => setLead(e.target.value)}>
             <option value="">— Unassigned —</option>
-            {students.map(u => (
+            {users.map(u => (
               <option key={u.id} value={u.id}>{u.name}</option>
             ))}
           </select>
@@ -86,20 +114,53 @@ export default function ProjectForm({ initial, onClose }) {
         )}
       </div>
 
+      {/* Team members picker */}
+      <div>
+        <label className="label">Team Members</label>
+        <p className="text-xs text-slate-400 mb-2">
+          Select additional contributors — they can view and work on this project
+        </p>
+        {teamCandidates.length === 0 ? (
+          <p className="text-xs text-slate-400 border border-slate-200 rounded-lg px-3 py-3 text-center">
+            No other team members to add
+          </p>
+        ) : (
+          <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-44 overflow-y-auto">
+            {teamCandidates.map(u => {
+              const checked = (form.teamMembers || []).includes(u.id)
+              return (
+                <label
+                  key={u.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors
+                    ${checked ? 'bg-brand-50' : 'hover:bg-slate-50'}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="rounded border-slate-300 text-brand-500 focus:ring-brand-500 shrink-0"
+                    checked={checked}
+                    onChange={() => toggleMember(u.id)}
+                  />
+                  <Avatar user={u} size="xs" />
+                  <span className="text-sm text-slate-700 flex-1">{u.name}</span>
+                  <RoleBadge role={u.role} />
+                </label>
+              )
+            })}
+          </div>
+        )}
+        {(form.teamMembers || []).length > 0 && (
+          <p className="text-xs text-brand-600 mt-1.5 font-medium">
+            {form.teamMembers.length} member{form.teamMembers.length !== 1 ? 's' : ''} selected
+          </p>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         {field('Start Date',
-          <input
-            type="date" className="input-base"
-            value={form.startDate}
-            onChange={e => set('startDate', e.target.value)}
-          />
+          <input type="date" className="input-base" value={form.startDate} onChange={e => set('startDate', e.target.value)} />
         )}
         {field('Deadline',
-          <input
-            type="date" className="input-base"
-            value={form.deadline}
-            onChange={e => set('deadline', e.target.value)}
-          />
+          <input type="date" className="input-base" value={form.deadline} onChange={e => set('deadline', e.target.value)} />
         )}
       </div>
 

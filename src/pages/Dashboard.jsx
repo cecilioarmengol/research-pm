@@ -89,7 +89,7 @@ export default function Dashboard() {
   const { user } = useAuth()
 
   const visibleProjects = user?.role === 'student'
-    ? projects.filter(p => p.assignedTo === user.id)
+    ? projects.filter(p => p.assignedTo === user.id || (p.teamMembers || []).includes(user.id))
     : projects
 
   return (

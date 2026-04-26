@@ -16,12 +16,16 @@ import { formatDate, isOverdue } from '../lib/utils'
 function ProjectRow({ project, onEdit, onDelete }) {
   const { getProjectProgress, getUserById, getStagesForProject } = useData()
   const { user } = useAuth()
-  const progress = getProjectProgress(project.id)
-  const assignee = getUserById(project.assignedTo)
-  const stages   = getStagesForProject(project.id)
+  const progress    = getProjectProgress(project.id)
+  const assignee    = getUserById(project.assignedTo)
+  const stages      = getStagesForProject(project.id)
   const activeStage = stages.find(s => s.status === 'in_progress')
-  const overdue  = isOverdue(project.deadline, project.status)
-  const canEdit  = user?.role === 'admin'
+  const overdue     = isOverdue(project.deadline, project.status)
+  const canEdit     = user?.role === 'admin'
+
+  const teamMembers = (project.teamMembers || [])
+    .map(id => getUserById(id))
+    .filter(Boolean)
 
   return (
     <div className={`card p-4 hover:shadow-md transition-all group ${overdue ? 'ring-1 ring-red-200' : ''}`}>
@@ -44,10 +48,28 @@ function ProjectRow({ project, onEdit, onDelete }) {
           <ProgressBar value={progress} size="sm" />
 
           <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-slate-500">
+            {/* Lead */}
             <div className="flex items-center gap-1.5">
               <Avatar user={assignee} size="xs" />
               <span>{assignee?.name ?? 'Unassigned'}</span>
             </div>
+
+            {/* Team members */}
+            {teamMembers.length > 0 && (
+              <div className="flex items-center gap-1.5">
+                <div className="flex -space-x-1.5">
+                  {teamMembers.slice(0, 4).map(m => (
+                    <div key={m.id} title={m.name}>
+                      <Avatar user={m} size="xs" />
+                    </div>
+                  ))}
+                </div>
+                {teamMembers.length > 4 && (
+                  <span className="text-slate-400">+{teamMembers.length - 4}</span>
+                )}
+              </div>
+            )}
+
             {activeStage && (
               <span className="text-brand-600 font-medium">▶ {activeStage.stageName}</span>
             )}
@@ -90,7 +112,9 @@ export default function Projects() {
   const canCreate = user?.role === 'admin'
 
   const visibleProjects = projects
-    .filter(p => user?.role === 'student' ? p.assignedTo === user.id : true)
+    .filter(p => user?.role === 'student'
+      ? p.assignedTo === user.id || (p.teamMembers || []).includes(user.id)
+      : true)
     .filter(p => statusFilter === 'all' || p.status === statusFilter)
     .filter(p => !search || p.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {

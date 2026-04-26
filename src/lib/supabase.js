@@ -20,6 +20,7 @@ export const mapProject = p => ({
   startDate:   p.start_date,
   deadline:    p.deadline,
   tags:        p.tags || [],
+  teamMembers: p.team_members || [],
   createdAt:   p.created_at,
   updatedAt:   p.updated_at,
 })

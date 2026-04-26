@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Edit2, Trash2, Calendar, User, Tag as TagIcon, Download } from 'lucide-react'
+import { ArrowLeft, Edit2, Trash2, Calendar, User, Users, Tag as TagIcon, Download } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
@@ -82,7 +82,7 @@ export default function ProjectDetail() {
   const days      = daysUntil(project.deadline)
 
   const canAdmin  = user?.role === 'admin'
-  const canEdit   = canAdmin || user?.id === project.assignedTo
+  const canEdit   = canAdmin || user?.id === project.assignedTo || (project.teamMembers || []).includes(user?.id)
 
   function handleDelete() {
     dispatch({ type: 'DELETE_PROJECT', payload: { id } })
@@ -169,7 +169,7 @@ export default function ProjectDetail() {
 
           {/* Info card */}
           <div className="card p-5 space-y-4">
-            <InfoRow icon={User} label="Assigned To">
+            <InfoRow icon={User} label="Project Lead">
               {assignee ? (
                 <div className="flex items-center gap-2">
                   <Avatar user={assignee} size="xs" />
@@ -177,6 +177,25 @@ export default function ProjectDetail() {
                 </div>
               ) : 'Unassigned'}
             </InfoRow>
+
+            {/* Team members */}
+            {(project.teamMembers || []).length > 0 && (
+              <InfoRow icon={Users} label="Team Members">
+                <div className="space-y-1.5 mt-1">
+                  {project.teamMembers.map(memberId => {
+                    const member = getUserById(memberId)
+                    if (!member) return null
+                    return (
+                      <div key={memberId} className="flex items-center gap-2">
+                        <Avatar user={member} size="xs" />
+                        <span>{member.name}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </InfoRow>
+            )}
+
             <InfoRow icon={Calendar} label="Start Date">{formatDate(project.startDate)}</InfoRow>
             <InfoRow icon={Calendar} label="Deadline">
               <span className={overdue ? 'text-red-600 font-semibold' : ''}>
