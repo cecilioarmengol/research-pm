@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { supabase, DEMO_MODE, mapUser } from '../lib/supabase'
 import { DEMO_USERS } from '../lib/mockData'
 
@@ -7,14 +7,6 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const loadingDone           = useRef(false)   // prevent double setLoading calls
-
-  function finishLoading() {
-    if (!loadingDone.current) {
-      loadingDone.current = true
-      setLoading(false)
-    }
-  }
 
   useEffect(() => {
     // ── Demo mode ─────────────────────────────────────────────────────────────
@@ -23,70 +15,90 @@ export function AuthProvider({ children }) {
         const stored = localStorage.getItem('rpm_session')
         if (stored) setUser(JSON.parse(stored))
       } catch { /* ignore */ }
-      finishLoading()
+      setLoading(false)
       return
     }
 
-    // ── Safety net: never stay on the spinner longer than 8 seconds ───────────
-    const timeout = setTimeout(() => {
-      console.warn('Auth check timed out — forcing loading to false')
-      finishLoading()
-    }, 8000)
+    let settled = false
+    function done() {
+      if (!settled) { settled = true; setLoading(false) }
+    }
 
-    // ── Supabase: onAuthStateChange fires for INITIAL_SESSION too ─────────────
-    // No need for a separate getSession() call — this covers everything.
+    // Hard timeout — if Supabase doesn't respond in 6s, show login page
+    const timeout = setTimeout(done, 6000)
+
+    // ── Check session once on mount ───────────────────────────────────────────
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) return fetchAndSetUser(session.user)
+        done()
+      })
+      .catch(done)   // ← this was missing before; network error → done()
+      .finally(() => clearTimeout(timeout))
+
+    // ── Listen for login / logout AFTER initial load ──────────────────────────
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        if (event === 'INITIAL_SESSION') return  // handled by getSession() above
         if (session?.user) {
-          await fetchProfile(session.user.id)
+          fetchAndSetUser(session.user)
         } else {
           setUser(null)
-          finishLoading()
+          done()
         }
       }
     )
 
     return () => {
+      settled = true
       clearTimeout(timeout)
       subscription.unsubscribe()
     }
   }, [])
 
-  async function fetchProfile(userId) {
+  // Fetch profile row; fall back to session user data if the table is unreachable
+  async function fetchAndSetUser(sessionUser) {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', userId)
+        .eq('id', sessionUser.id)
         .single()
 
       if (data) {
         setUser(mapUser(data))
+        setLoading(false)
         return
       }
 
-      // Profile doesn't exist yet — try to create it
-      if (error?.code === 'PGRST116') {   // "no rows returned"
-        const { data: auth } = await supabase.auth.getUser()
-        if (auth?.user) {
-          const profile = {
-            id:        auth.user.id,
-            email:     auth.user.email,
-            full_name: auth.user.user_metadata?.full_name || auth.user.email.split('@')[0],
-            role:      auth.user.user_metadata?.role || 'student',
-          }
-          const { data: created } = await supabase
-            .from('profiles')
-            .upsert(profile)
-            .select()
-            .single()
-          if (created) setUser(mapUser(created))
-        }
+      // No profile row yet — try to create one
+      const profile = {
+        id:        sessionUser.id,
+        email:     sessionUser.email,
+        full_name: sessionUser.user_metadata?.full_name || sessionUser.email.split('@')[0],
+        role:      sessionUser.user_metadata?.role || 'student',
       }
-    } catch (err) {
-      console.error('fetchProfile error:', err)
+      const { data: created } = await supabase
+        .from('profiles').upsert(profile).select().single()
+
+      setUser(created ? mapUser(created) : sessionFallback(sessionUser))
+    } catch {
+      // Profile table unreachable — still log the user in using session data
+      setUser(sessionFallback(sessionUser))
     } finally {
-      finishLoading()
+      setLoading(false)
+    }
+  }
+
+  function sessionFallback(sessionUser) {
+    const name = sessionUser.user_metadata?.full_name
+      || sessionUser.email.split('@')[0]
+    return {
+      id:       sessionUser.id,
+      email:    sessionUser.email,
+      name,
+      role:     sessionUser.user_metadata?.role || 'student',
+      initials: name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
     }
   }
 
@@ -104,6 +116,7 @@ export function AuthProvider({ children }) {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) return { error: error.message }
+    // onAuthStateChange SIGNED_IN will call fetchAndSetUser automatically
     return { user: data.user }
   }
 
