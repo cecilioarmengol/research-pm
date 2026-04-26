@@ -1,31 +1,29 @@
-import { createContext, useContext, useReducer, useEffect, useCallback } from 'react'
+import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
+import { useAuth } from './AuthContext'
 
 const DataContext = createContext(null)
 const STORAGE_KEY = 'rpm_data'
 
-function loadState() {
+// ── Demo mode (localStorage) ──────────────────────────────────────────────────
+function loadDemoState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
   const { projects, stages, tasks } = buildInitialData()
   return {
-    projects,
-    stages,
-    tasks,
+    projects, stages, tasks,
     comments: SEED_COMMENTS,
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
-    notifications: [],
   }
 }
 
-function reducer(state, action) {
+function demoReducer(state, action) {
   switch (action.type) {
-
-    // ── Projects ──────────────────────────────────────────────────────────────
     case 'ADD_PROJECT': {
       const id = uid()
       const projectStages = STAGES.map((s, i) => ({
@@ -47,149 +45,269 @@ function reducer(state, action) {
         tasks: [...state.tasks, ...projectTasks],
       }
     }
-
-    case 'UPDATE_PROJECT': {
+    case 'UPDATE_PROJECT':
+      return { ...state, projects: state.projects.map(p => p.id === action.payload.id ? { ...p, ...action.payload, updatedAt: new Date().toISOString() } : p) }
+    case 'DELETE_PROJECT':
       return {
         ...state,
-        projects: state.projects.map(p =>
-          p.id === action.payload.id ? { ...p, ...action.payload, updatedAt: new Date().toISOString() } : p
-        ),
+        projects: state.projects.filter(p => p.id !== action.payload.id),
+        stages:   state.stages.filter(s => s.projectId !== action.payload.id),
+        tasks:    state.tasks.filter(t => t.projectId !== action.payload.id),
+        comments: state.comments.filter(c => c.projectId !== action.payload.id),
       }
-    }
-
-    case 'DELETE_PROJECT': {
-      const { id } = action.payload
-      const stageIds = state.stages.filter(s => s.projectId === id).map(s => s.id)
-      return {
-        ...state,
-        projects:  state.projects.filter(p => p.id !== id),
-        stages:    state.stages.filter(s => s.projectId !== id),
-        tasks:     state.tasks.filter(t => t.projectId !== id),
-        comments:  state.comments.filter(c => c.projectId !== id),
-      }
-    }
-
-    // ── Stages ────────────────────────────────────────────────────────────────
     case 'UPDATE_STAGE': {
-      const updatedStages = state.stages.map(s =>
-        s.id === action.payload.id ? { ...s, ...action.payload } : s
-      )
-      // Recalculate project status based on stages
-      const projectId = action.payload.projectId
-      const projectStages = updatedStages.filter(s => s.projectId === projectId)
-      const projectTasks  = state.tasks.filter(t => t.projectId === projectId)
-      let derivedStatus = 'not_started'
-      if (projectStages.every(s => s.status === 'completed')) derivedStatus = 'completed'
-      else if (projectStages.some(s => s.status === 'in_progress' || s.status === 'completed')) derivedStatus = 'in_progress'
-
+      const updatedStages = state.stages.map(s => s.id === action.payload.id ? { ...s, ...action.payload } : s)
+      const pStages = updatedStages.filter(s => s.projectId === action.payload.projectId)
+      let status = 'not_started'
+      if (pStages.every(s => s.status === 'completed')) status = 'completed'
+      else if (pStages.some(s => s.status === 'in_progress' || s.status === 'completed')) status = 'in_progress'
       return {
         ...state,
         stages: updatedStages,
-        projects: state.projects.map(p =>
-          p.id === projectId
-            ? { ...p, status: p.status === 'delayed' ? 'delayed' : derivedStatus, updatedAt: new Date().toISOString() }
-            : p
-        ),
+        projects: state.projects.map(p => p.id === action.payload.projectId
+          ? { ...p, status: p.status === 'delayed' ? 'delayed' : status, updatedAt: new Date().toISOString() } : p),
       }
     }
-
-    // ── Tasks ─────────────────────────────────────────────────────────────────
-    case 'TOGGLE_TASK': {
-      const { taskId } = action.payload
-      const updatedTasks = state.tasks.map(t =>
-        t.id === taskId
-          ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : null }
-          : t
-      )
-      return { ...state, tasks: updatedTasks }
-    }
-
-    case 'UPDATE_TASK': {
-      return {
-        ...state,
-        tasks: state.tasks.map(t => t.id === action.payload.id ? { ...t, ...action.payload } : t),
-      }
-    }
-
-    case 'ADD_TASK': {
-      return {
-        ...state,
-        tasks: [...state.tasks, { id: uid(), completed: false, completedAt: null, createdAt: new Date().toISOString(), ...action.payload }],
-      }
-    }
-
-    case 'DELETE_TASK': {
+    case 'TOGGLE_TASK':
+      return { ...state, tasks: state.tasks.map(t => t.id === action.payload.taskId ? { ...t, completed: !t.completed, completedAt: !t.completed ? new Date().toISOString() : null } : t) }
+    case 'UPDATE_TASK':
+      return { ...state, tasks: state.tasks.map(t => t.id === action.payload.id ? { ...t, ...action.payload } : t) }
+    case 'ADD_TASK':
+      return { ...state, tasks: [...state.tasks, { id: uid(), completed: false, completedAt: null, createdAt: new Date().toISOString(), ...action.payload }] }
+    case 'DELETE_TASK':
       return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload.id) }
-    }
-
-    // ── Comments ──────────────────────────────────────────────────────────────
-    case 'ADD_COMMENT': {
-      return {
-        ...state,
-        comments: [...state.comments, { id: uid(), createdAt: new Date().toISOString(), ...action.payload }],
-      }
-    }
-
-    // ── Users (admin) ─────────────────────────────────────────────────────────
-    case 'ADD_USER': {
+    case 'ADD_COMMENT':
+      return { ...state, comments: [...state.comments, { id: uid(), createdAt: new Date().toISOString(), ...action.payload }] }
+    case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
-    }
-
-    case 'UPDATE_USER': {
-      return {
-        ...state,
-        users: state.users.map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u),
-      }
-    }
-
-    case 'DELETE_USER': {
+    case 'UPDATE_USER':
+      return { ...state, users: state.users.map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) }
+    case 'DELETE_USER':
       return { ...state, users: state.users.filter(u => u.id !== action.payload.id) }
-    }
-
-    // ── Notifications ─────────────────────────────────────────────────────────
-    case 'MARK_NOTIFICATION_READ': {
-      return {
-        ...state,
-        notifications: state.notifications.map(n =>
-          n.id === action.payload.id ? { ...n, read: true } : n
-        ),
-      }
-    }
-
     default: return state
   }
 }
 
-export function DataProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, null, loadState)
+// ── Supabase mode ─────────────────────────────────────────────────────────────
+function useSupabaseData(user) {
+  const [projects,  setProjects]  = useState([])
+  const [stages,    setStages]    = useState([])
+  const [tasks,     setTasks]     = useState([])
+  const [comments,  setComments]  = useState([])
+  const [users,     setUsers]     = useState([])
+  const [loading,   setLoading]   = useState(true)
 
-  // Persist to localStorage whenever state changes
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)) } catch { /* ignore */ }
-  }, [state])
+    if (!user) return
+    loadAll()
 
-  // ── Derived helpers ────────────────────────────────────────────────────────
+    // Real-time subscriptions
+    const channel = supabase.channel('realtime-all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' },      () => loadProjects())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages' },() => loadStages())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' },         () => loadTasks())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },      () => loadComments())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },      () => loadUsers())
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [user])
+
+  async function loadAll() {
+    setLoading(true)
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadUsers()])
+    setLoading(false)
+  }
+
+  async function loadProjects() {
+    const { data } = await supabase.from('projects').select('*').order('created_at')
+    if (data) setProjects(data.map(mapProject))
+  }
+  async function loadStages() {
+    const { data } = await supabase.from('project_stages').select('*').order('stage_order')
+    if (data) setStages(data.map(mapStage))
+  }
+  async function loadTasks() {
+    const { data } = await supabase.from('tasks').select('*').order('created_at')
+    if (data) setTasks(data.map(mapTask))
+  }
+  async function loadComments() {
+    const { data } = await supabase.from('comments').select('*').order('created_at')
+    if (data) setComments(data.map(mapComment))
+  }
+  async function loadUsers() {
+    const { data } = await supabase.from('profiles').select('*')
+    if (data) setUsers(data.map(mapUser))
+  }
+
+  // ── Supabase CRUD ────────────────────────────────────────────────────────────
+  async function dispatch(action) {
+    switch (action.type) {
+
+      case 'ADD_PROJECT': {
+        const { data: proj, error } = await supabase.from('projects').insert({
+          title: action.payload.title, description: action.payload.description,
+          assigned_to: action.payload.assignedTo || null,
+          created_by: user.id, status: action.payload.status || 'not_started',
+          start_date: action.payload.startDate || null,
+          deadline: action.payload.deadline || null,
+          tags: action.payload.tags || [],
+        }).select().single()
+        if (error || !proj) return
+
+        // Insert all 8 stages
+        const stageRows = STAGES.map((s, i) => ({
+          project_id: proj.id, stage_key: s.key, stage_name: s.name,
+          stage_order: i, status: 'pending',
+          estimated_days: [14,21,30,45,30,21,30,14][i],
+        }))
+        const { data: createdStages } = await supabase.from('project_stages').insert(stageRows).select()
+
+        // Insert default tasks for each stage
+        if (createdStages) {
+          const taskRows = createdStages.flatMap(stage =>
+            (DEFAULT_TASKS[stage.stage_key] || []).map(title => ({
+              stage_id: stage.id, project_id: proj.id,
+              title, completed: false,
+            }))
+          )
+          if (taskRows.length) await supabase.from('tasks').insert(taskRows)
+        }
+        await loadAll()
+        break
+      }
+
+      case 'UPDATE_PROJECT': {
+        const { id, title, description, assignedTo, status, startDate, deadline, tags } = action.payload
+        await supabase.from('projects').update({
+          title, description,
+          assigned_to: assignedTo || null,
+          status, start_date: startDate || null,
+          deadline: deadline || null, tags: tags || [],
+          updated_at: new Date().toISOString(),
+        }).eq('id', id)
+        await loadProjects()
+        break
+      }
+
+      case 'DELETE_PROJECT':
+        await supabase.from('projects').delete().eq('id', action.payload.id)
+        await loadAll()
+        break
+
+      case 'UPDATE_STAGE': {
+        const { id, status, startDate, endDate } = action.payload
+        await supabase.from('project_stages').update({
+          status, start_date: startDate || null, end_date: endDate || null,
+        }).eq('id', id)
+        // Update project status too
+        const pStages = stages.map(s => s.id === id ? { ...s, status } : s).filter(s => s.projectId === action.payload.projectId)
+        let pStatus = 'not_started'
+        if (pStages.every(s => s.status === 'completed')) pStatus = 'completed'
+        else if (pStages.some(s => s.status === 'in_progress' || s.status === 'completed')) pStatus = 'in_progress'
+        const curProject = projects.find(p => p.id === action.payload.projectId)
+        if (curProject && curProject.status !== 'delayed') {
+          await supabase.from('projects').update({ status: pStatus, updated_at: new Date().toISOString() }).eq('id', action.payload.projectId)
+        }
+        await loadStages()
+        await loadProjects()
+        break
+      }
+
+      case 'TOGGLE_TASK': {
+        const task = tasks.find(t => t.id === action.payload.taskId)
+        if (!task) return
+        const completed = !task.completed
+        await supabase.from('tasks').update({
+          completed,
+          completed_at: completed ? new Date().toISOString() : null,
+        }).eq('id', task.id)
+        await loadTasks()
+        break
+      }
+
+      case 'UPDATE_TASK': {
+        const { id, title, deadline, notes } = action.payload
+        await supabase.from('tasks').update({ title, deadline: deadline || null, notes: notes || '' }).eq('id', id)
+        await loadTasks()
+        break
+      }
+
+      case 'ADD_TASK': {
+        await supabase.from('tasks').insert({
+          stage_id: action.payload.stageId, project_id: action.payload.projectId,
+          title: action.payload.title, completed: false,
+          deadline: action.payload.deadline || null, notes: action.payload.notes || '',
+        })
+        await loadTasks()
+        break
+      }
+
+      case 'DELETE_TASK':
+        await supabase.from('tasks').delete().eq('id', action.payload.id)
+        await loadTasks()
+        break
+
+      case 'ADD_COMMENT':
+        await supabase.from('comments').insert({
+          project_id: action.payload.projectId,
+          user_id: user.id,
+          content: action.payload.content,
+        })
+        await loadComments()
+        break
+
+      case 'UPDATE_USER':
+        await supabase.from('profiles').update({
+          full_name: action.payload.name,
+          role: action.payload.role,
+          email: action.payload.email,
+        }).eq('id', action.payload.id)
+        await loadUsers()
+        break
+
+      case 'DELETE_USER':
+        await supabase.from('profiles').delete().eq('id', action.payload.id)
+        await loadUsers()
+        break
+
+      default: break
+    }
+  }
+
+  return { projects, stages, tasks, comments, users, loading, dispatch }
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+export function DataProvider({ children }) {
+  const { user } = useAuth()
+
+  // Demo mode
+  const [demoState, demoDispatch] = useReducer(demoReducer, null, loadDemoState)
+  useEffect(() => {
+    if (DEMO_MODE) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(demoState)) } catch { /* ignore */ }
+    }
+  }, [demoState])
+
+  // Supabase mode
+  const sb = useSupabaseData(DEMO_MODE ? null : user)
+
+  const state    = DEMO_MODE ? demoState  : sb
+  const dispatch = DEMO_MODE ? demoDispatch : sb.dispatch
+
+  // ── Derived helpers ──────────────────────────────────────────────────────────
   const getProjectProgress = useCallback((projectId) => {
-    const stages = state.stages.filter(s => s.projectId === projectId)
-    const tasks  = state.tasks.filter(t => t.projectId === projectId)
-    return calculateProgress(stages, tasks)
+    const pStages = state.stages.filter(s => s.projectId === projectId)
+    const pTasks  = state.tasks.filter(t => t.projectId === projectId)
+    return calculateProgress(pStages, pTasks)
   }, [state.stages, state.tasks])
 
-  const getUserById = useCallback((id) => state.users.find(u => u.id === id), [state.users])
-
-  const getProjectById = useCallback((id) => state.projects.find(p => p.id === id), [state.projects])
-
-  const getStagesForProject = useCallback((projectId) =>
-    state.stages.filter(s => s.projectId === projectId).sort((a, b) => a.order - b.order),
-  [state.stages])
-
-  const getTasksForStage = useCallback((stageId) =>
-    state.tasks.filter(t => t.stageId === stageId),
-  [state.tasks])
-
-  const getCommentsForProject = useCallback((projectId) =>
-    state.comments.filter(c => c.projectId === projectId).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)),
-  [state.comments])
+  const getUserById          = useCallback((id) => state.users.find(u => u.id === id), [state.users])
+  const getProjectById       = useCallback((id) => state.projects.find(p => p.id === id), [state.projects])
+  const getStagesForProject  = useCallback((projectId) => state.stages.filter(s => s.projectId === projectId).sort((a, b) => a.order - b.order), [state.stages])
+  const getTasksForStage     = useCallback((stageId)   => state.tasks.filter(t => t.stageId === stageId), [state.tasks])
+  const getCommentsForProject = useCallback((projectId) => state.comments.filter(c => c.projectId === projectId).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)), [state.comments])
 
   return (
     <DataContext.Provider value={{
@@ -201,6 +319,7 @@ export function DataProvider({ children }) {
       getStagesForProject,
       getTasksForStage,
       getCommentsForProject,
+      isDemo: DEMO_MODE,
     }}>
       {children}
     </DataContext.Provider>

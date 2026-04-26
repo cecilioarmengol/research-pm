@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FlaskConical, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { DEMO_MODE } from '../lib/supabase'
 import Button from '../components/ui/Button'
 
 const DEMO_ACCOUNTS = [
@@ -95,25 +96,32 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Demo accounts */}
-          <div className="mt-6 pt-6 border-t border-slate-100">
-            <p className="text-xs text-slate-500 font-medium mb-3 text-center uppercase tracking-wide">
-              Demo Accounts — click to auto-fill
+          {/* Demo accounts — only shown in demo mode */}
+          {DEMO_MODE ? null : null}
+          {!DEMO_MODE ? (
+            <p className="text-xs text-center text-slate-400 mt-6 pt-6 border-t border-slate-100">
+              Use your email and password to sign in. Contact your admin if you need access.
             </p>
-            <div className="space-y-1.5">
-              {DEMO_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.email}
-                  onClick={() => quickLogin(acc)}
-                  className="w-full text-left px-3 py-2.5 rounded-lg border border-slate-100 hover:border-brand-200 hover:bg-brand-50 transition-colors group"
-                >
-                  <span className="text-sm font-medium text-slate-700 group-hover:text-brand-700">{acc.role}</span>
-                  <span className="text-xs text-slate-400 ml-2">{acc.email}</span>
-                </button>
-              ))}
+          ) : (
+            <div className="mt-6 pt-6 border-t border-slate-100">
+              <p className="text-xs text-slate-500 font-medium mb-3 text-center uppercase tracking-wide">
+                Demo Accounts — click to auto-fill
+              </p>
+              <div className="space-y-1.5">
+                {DEMO_ACCOUNTS.map(acc => (
+                  <button
+                    key={acc.email}
+                    onClick={() => quickLogin(acc)}
+                    className="w-full text-left px-3 py-2.5 rounded-lg border border-slate-100 hover:border-brand-200 hover:bg-brand-50 transition-colors group"
+                  >
+                    <span className="text-sm font-medium text-slate-700 group-hover:text-brand-700">{acc.role}</span>
+                    <span className="text-xs text-slate-400 ml-2">{acc.email}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-center text-slate-400 mt-3">All demo accounts use password: <code className="bg-slate-100 px-1 rounded">demo123</code></p>
             </div>
-            <p className="text-xs text-center text-slate-400 mt-3">All demo accounts use password: <code className="bg-slate-100 px-1 rounded">demo123</code></p>
-          </div>
+          )}
         </div>
       </div>
     </div>
