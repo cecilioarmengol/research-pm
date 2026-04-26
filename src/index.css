@@ -14,6 +14,11 @@
   ::-webkit-scrollbar-thumb:hover { @apply bg-slate-400; }
 }
 
+/* Safe area for iPhone home indicator */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 @layer components {
   .card { @apply bg-white rounded-xl border border-slate-200 shadow-sm; }
   .input-base {
