@@ -65,20 +65,20 @@ export default function Sidebar() {
 
       {/* User */}
       <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-2 py-2">
+        <NavLink to="/profile" className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-800 transition-colors group">
           <Avatar user={user} size="sm" />
           <div className="flex-1 min-w-0">
             <p className="text-white text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-slate-500 text-xs capitalize">{user?.role}</p>
+            <p className="text-slate-500 text-xs capitalize">Edit profile</p>
           </div>
           <button
-            onClick={logout}
+            onClick={e => { e.preventDefault(); logout() }}
             className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-700 transition-colors"
             title="Sign out"
           >
             <LogOut size={15} />
           </button>
-        </div>
+        </NavLink>
       </div>
     </aside>
   )
