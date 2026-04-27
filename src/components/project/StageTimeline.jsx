@@ -30,7 +30,6 @@ export default function StageTimeline({ project, stages }) {
   const [saving, setSaving]     = useState(false)
 
   function openEdit(stage) {
-    if (!canEdit) return
     setForm({
       status:    stage.status,
       startDate: stage.startDate || '',
@@ -76,18 +75,16 @@ export default function StageTimeline({ project, stages }) {
                 <div key={stage.id} className="flex flex-col items-center gap-2 min-w-[72px]">
                   <button
                     onClick={() => openEdit(stage)}
-                    disabled={!canEdit}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all
+                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all cursor-pointer hover:scale-110
                       ${isDone    ? 'border-transparent shadow-sm'   : ''}
                       ${isActive  ? 'border-transparent shadow-md'   : ''}
                       ${!isDone && !isActive ? 'bg-white border-slate-200' : ''}
-                      ${canEdit   ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
                     `}
                     style={{
                       backgroundColor: isDone || isActive ? m.color : undefined,
                       boxShadow: isActive ? `0 0 0 4px ${m.color}33` : undefined,
                     }}
-                    title={canEdit ? 'Click to edit stage' : stage.stageName}
+                    title="Click to view stage"
                   >
                     <StageIcon status={stage.status} />
                   </button>
