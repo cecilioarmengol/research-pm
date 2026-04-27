@@ -78,6 +78,8 @@ function demoReducer(state, action) {
       return { ...state, tasks: state.tasks.filter(t => t.id !== action.payload.id) }
     case 'ADD_COMMENT':
       return { ...state, comments: [...state.comments, { id: uid(), createdAt: new Date().toISOString(), ...action.payload }] }
+    case 'DELETE_COMMENT':
+      return { ...state, comments: state.comments.filter(c => c.id !== action.payload.id) }
     case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
     case 'UPDATE_USER':
@@ -256,6 +258,11 @@ function useSupabaseData(user) {
           user_id: user.id,
           content: action.payload.content,
         })
+        await loadComments()
+        break
+
+      case 'DELETE_COMMENT':
+        await supabase.from('comments').delete().eq('id', action.payload.id)
         await loadComments()
         break
 
