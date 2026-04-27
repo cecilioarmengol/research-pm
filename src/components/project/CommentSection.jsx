@@ -51,11 +51,11 @@ export default function CommentSection({ projectId }) {
                     <span className="text-xs text-slate-400">{formatRelative(c.createdAt)}</span>
                   </div>
 
-                  {/* Delete button — only visible on hover, only if allowed */}
+                  {/* Delete button — always visible if allowed */}
                   {canDelete && confirmDelete !== c.id && (
                     <button
                       onClick={() => setConfirmDelete(c.id)}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-slate-300 hover:text-red-400 shrink-0"
+                      className="p-1 text-slate-300 hover:text-red-400 transition-colors shrink-0"
                       title="Delete message"
                     >
                       <Trash2 size={13} />
