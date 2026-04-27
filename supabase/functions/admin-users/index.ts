@@ -67,10 +67,12 @@ Deno.serve(async (req: Request) => {
       const { userId, full_name, role } = body
       if (!userId) return json({ error: 'userId is required' }, 400)
 
-      await supabaseAdmin
+      const { error: updateErr } = await supabaseAdmin
         .from('profiles')
         .update({ full_name, role })
         .eq('id', userId)
+
+      if (updateErr) return json({ error: updateErr.message }, 400)
 
       return json({ success: true })
     }
