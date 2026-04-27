@@ -97,10 +97,18 @@ function UserForm({ initial, onClose, onSave, saving, error: outerError }) {
         </div>
       )}
 
+      {!isEdit && !DEMO_MODE && (
+        <p className="text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2">
+          ⏱ First account creation may take up to 20 seconds while the server wakes up. Subsequent ones are instant.
+        </p>
+      )}
+
       <div className="flex justify-end gap-3 pt-2 border-t border-slate-100">
         <Button variant="secondary" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button type="submit" variant="primary" disabled={saving}>
-          {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Account'}
+          {saving
+            ? (isEdit ? 'Saving…' : 'Creating account…')
+            : (isEdit ? 'Save Changes' : 'Create Account')}
         </Button>
       </div>
     </form>
