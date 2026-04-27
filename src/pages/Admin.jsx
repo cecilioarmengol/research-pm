@@ -121,7 +121,7 @@ function UserForm({ initial, onClose, onSave, saving, error: outerError }) {
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 export default function Admin() {
-  const { users, projects, dispatch, getProjectProgress, getUserById, getStagesForProject } = useData()
+  const { users, projects, dispatch, reloadUsers, getProjectProgress, getUserById, getStagesForProject } = useData()
   const { user: currentUser }    = useAuth()
   const [showForm, setShowForm]  = useState(false)
   const [editUser, setEditUser]  = useState(null)
@@ -186,8 +186,8 @@ export default function Admin() {
           role:      userData.role,
         })
       }
+      await reloadUsers()
       closeForm()
-      // Real-time subscription updates users list automatically
     } catch (err) {
       setFormError(err.message)
     } finally {
@@ -207,6 +207,7 @@ export default function Admin() {
     setSaving(true)
     try {
       await callAdminApi('delete', { userId: u.id })
+      await reloadUsers()
       setDeleteConfirm(null)
     } catch (err) {
       setDeleteError(err.message)

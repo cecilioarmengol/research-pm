@@ -284,7 +284,7 @@ function useSupabaseData(user) {
     }
   }
 
-  return { projects, stages, tasks, comments, users, loading, dispatch }
+  return { projects, stages, tasks, comments, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
