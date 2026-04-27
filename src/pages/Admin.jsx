@@ -295,11 +295,12 @@ export default function Admin() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { label: 'Admins',   value: users.filter(u => u.role === 'admin').length,   color: 'text-brand-600'  },
-            { label: 'PIs',      value: users.filter(u => u.role === 'pi').length,      color: 'text-purple-600' },
-            { label: 'Students', value: users.filter(u => u.role === 'student').length, color: 'text-teal-600'   },
+            { label: 'Admins',           value: users.filter(u => u.role === 'admin').length,            color: 'text-brand-600'  },
+            { label: 'PIs',              value: users.filter(u => u.role === 'pi').length,               color: 'text-purple-600' },
+            { label: 'Research Fellows', value: users.filter(u => u.role === 'research_fellow').length,  color: 'text-amber-600'  },
+            { label: 'Students',         value: users.filter(u => u.role === 'student').length,          color: 'text-teal-600'   },
           ].map(({ label, value, color }) => (
             <div key={label} className="card p-4 text-center">
               <p className={`text-2xl font-bold ${color}`}>{value}</p>
