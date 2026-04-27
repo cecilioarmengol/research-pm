@@ -1,4 +1,4 @@
-import { Bell, FlaskConical } from 'lucide-react'
+import { Bell, Brain } from 'lucide-react'
 
 export default function Header({ title, subtitle, actions }) {
   return (
@@ -7,7 +7,7 @@ export default function Header({ title, subtitle, actions }) {
       <div className="flex items-center gap-3">
         {/* Logo icon — only on mobile */}
         <div className="flex md:hidden items-center justify-center w-7 h-7 bg-brand-500 rounded-lg shrink-0">
-          <FlaskConical size={15} className="text-white" />
+          <Brain size={15} className="text-white" />
         </div>
         <div>
           <h1 className="text-base md:text-lg font-semibold text-slate-900 leading-tight">{title}</h1>

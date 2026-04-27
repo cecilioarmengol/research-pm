@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderKanban, Users, Settings,
-  FlaskConical, ChevronRight, LogOut,
+  LayoutDashboard, FolderKanban, Users,
+  Brain, LogOut,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
@@ -31,7 +31,7 @@ export default function Sidebar() {
       <div className="px-5 py-5 border-b border-slate-800">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center">
-            <FlaskConical size={18} className="text-white" />
+            <Brain size={18} className="text-white" />
           </div>
           <div>
             <div className="text-white font-bold text-sm leading-tight">ResearchFlow</div>
