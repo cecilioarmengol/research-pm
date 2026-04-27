@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Check, Clock, Circle, Calendar } from 'lucide-react'
+import { parseISO, format } from 'date-fns'
 import { STAGES } from '../../lib/constants'
 import { useData } from '../../context/DataContext'
 import { useAuth } from '../../context/AuthContext'
@@ -102,7 +103,7 @@ export default function StageTimeline({ project, stages }) {
                       <Calendar size={9} />
                       <span className="text-[9px] leading-tight text-center">
                         {stage.startDate
-                          ? new Date(stage.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          ? format(parseISO(stage.startDate), 'MMM d')
                           : '—'}
                       </span>
                     </div>
