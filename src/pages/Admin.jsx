@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Plus, Trash2, Edit2, Eye, EyeOff } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus, Trash2, Edit2, Eye, EyeOff, Search, ArrowUpRight, Calendar, FolderKanban } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase, DEMO_MODE } from '../lib/supabase'
@@ -7,8 +8,10 @@ import Layout from '../components/layout/Layout'
 import Header from '../components/layout/Header'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
-import { RoleBadge } from '../components/ui/Badge'
+import { RoleBadge, StatusBadge, Tag } from '../components/ui/Badge'
 import Avatar from '../components/ui/Avatar'
+import ProgressBar from '../components/ui/ProgressBar'
+import { formatDate, isOverdue } from '../lib/utils'
 
 // ── User form ─────────────────────────────────────────────────────────────────
 function UserForm({ initial, onClose, onSave, saving, error: outerError }) {
@@ -117,7 +120,7 @@ function UserForm({ initial, onClose, onSave, saving, error: outerError }) {
 
 // ── Admin page ────────────────────────────────────────────────────────────────
 export default function Admin() {
-  const { users, projects, dispatch, loadUsers } = useData()
+  const { users, projects, dispatch, getProjectProgress, getUserById, getStagesForProject } = useData()
   const { user: currentUser }    = useAuth()
   const [showForm, setShowForm]  = useState(false)
   const [editUser, setEditUser]  = useState(null)
@@ -125,6 +128,11 @@ export default function Admin() {
   const [saving, setSaving]      = useState(false)
   const [formError, setFormError] = useState('')
   const [deleteError, setDeleteError] = useState('')
+
+  // Projects section state
+  const [projView, setProjView]       = useState('all')   // 'all' | 'mine'
+  const [projSearch, setProjSearch]   = useState('')
+  const [projStatus, setProjStatus]   = useState('all')
 
   if (currentUser?.role !== 'admin') {
     return (
@@ -296,6 +304,133 @@ export default function Admin() {
               <p className="text-sm text-slate-500 mt-0.5">{label}</p>
             </div>
           ))}
+        </div>
+
+        {/* ── Projects section ───────────────────────────────────────── */}
+        <div className="card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <FolderKanban size={16} className="text-slate-500" />
+              <h3 className="text-sm font-semibold text-slate-700">Projects</h3>
+            </div>
+
+            {/* All / Mine toggle */}
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+              {[['all', 'All Projects'], ['mine', 'My Projects']].map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setProjView(val)}
+                  className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+                    projView === val ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Search + status filter */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 flex-1 min-w-40">
+              <Search size={13} className="text-slate-400 shrink-0" />
+              <input
+                value={projSearch}
+                onChange={e => setProjSearch(e.target.value)}
+                placeholder="Search projects…"
+                className="bg-transparent text-xs text-slate-700 placeholder-slate-400 outline-none flex-1"
+              />
+            </div>
+            <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+              {['all', 'not_started', 'in_progress', 'delayed', 'completed'].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setProjStatus(s)}
+                  className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+                    projStatus === s ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {{ all: 'All', not_started: 'Not Started', in_progress: 'Active', delayed: 'Delayed', completed: 'Done' }[s]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Project rows */}
+          {(() => {
+            const filtered = projects
+              .filter(p => projView === 'all'
+                ? true
+                : p.assignedTo === currentUser.id || (p.teamMembers || []).includes(currentUser.id))
+              .filter(p => projStatus === 'all' || p.status === projStatus)
+              .filter(p => !projSearch || p.title.toLowerCase().includes(projSearch.toLowerCase()))
+              .sort((a, b) => {
+                const rank = { delayed: 0, in_progress: 1, not_started: 2, completed: 3 }
+                return (rank[a.status] ?? 9) - (rank[b.status] ?? 9)
+              })
+
+            if (filtered.length === 0) return (
+              <p className="text-sm text-slate-400 text-center py-8">No projects match your filters.</p>
+            )
+
+            return (
+              <div className="space-y-2">
+                {filtered.map(p => {
+                  const progress    = getProjectProgress(p.id)
+                  const assignee    = getUserById(p.assignedTo)
+                  const stages      = getStagesForProject(p.id)
+                  const activeStage = stages.find(s => s.status === 'in_progress')
+                  const overdue     = isOverdue(p.deadline, p.status)
+                  const teamMembers = (p.teamMembers || []).map(id => getUserById(id)).filter(Boolean)
+                  const isMyProject = p.assignedTo === currentUser.id || (p.teamMembers || []).includes(currentUser.id)
+
+                  return (
+                    <div key={p.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-all hover:shadow-sm group ${overdue ? 'border-red-200 bg-red-50/30' : 'border-slate-100 bg-slate-50/50'}`}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <Link to={`/projects/${p.id}`} className="text-sm font-medium text-slate-800 hover:text-brand-600 transition-colors truncate">
+                            {p.title}
+                          </Link>
+                          <StatusBadge status={p.status} />
+                          {isMyProject && (
+                            <span className="text-xs bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">Mine</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            <Avatar user={assignee} size="xs" />
+                            <span>{assignee?.name ?? 'Unassigned'}</span>
+                          </div>
+                          {teamMembers.length > 0 && (
+                            <div className="flex -space-x-1">
+                              {teamMembers.slice(0, 3).map(m => <div key={m.id} title={m.name}><Avatar user={m} size="xs" /></div>)}
+                              {teamMembers.length > 3 && <span className="text-slate-400 ml-1">+{teamMembers.length - 3}</span>}
+                            </div>
+                          )}
+                          {activeStage && <span className="text-brand-600 font-medium">▶ {activeStage.stageName}</span>}
+                          {p.deadline && (
+                            <span className={`flex items-center gap-1 ${overdue ? 'text-red-500 font-medium' : ''}`}>
+                              <Calendar size={11} />
+                              {overdue ? 'Overdue — ' : ''}{formatDate(p.deadline)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-2 max-w-xs">
+                          <ProgressBar value={progress} size="sm" showLabel={false} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-xs font-semibold text-slate-500 w-8 text-right">{progress}%</span>
+                        <Link to={`/projects/${p.id}`}>
+                          <Button variant="ghost" size="xs" icon={ArrowUpRight} title="Open project" />
+                        </Link>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })()}
         </div>
 
         {/* Project assignments */}
