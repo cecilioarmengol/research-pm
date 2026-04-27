@@ -1,43 +1,59 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts'
+import { PieChart, Pie, Legend, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { STATUS, STAGES } from '../../lib/constants'
+import Avatar from '../ui/Avatar'
 
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
-  const students = users.filter(u => ['student', 'research_fellow'].includes(u.role))
-  const data = students.map(u => ({
-    name: u.name.split(' ')[0], // first name only
-    fullName: u.name,
-    projects: projects.filter(p => p.assignedTo === u.id).length,
-    active: projects.filter(p => p.assignedTo === u.id && p.status === 'in_progress').length,
-    delayed: projects.filter(p => p.assignedTo === u.id && p.status === 'delayed').length,
-  }))
+  const researchers = users
+    .filter(u => ['student', 'research_fellow', 'pi'].includes(u.role))
+    .map(u => ({
+      user: u,
+      total:     projects.filter(p => p.assignedTo === u.id).length,
+      active:    projects.filter(p => p.assignedTo === u.id && p.status === 'in_progress').length,
+      delayed:   projects.filter(p => p.assignedTo === u.id && p.status === 'delayed').length,
+      completed: projects.filter(p => p.assignedTo === u.id && p.status === 'completed').length,
+    }))
+    .filter(r => r.total > 0)
+    .sort((a, b) => b.active - a.active || b.total - a.total)
 
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null
-    const d = data.find(x => x.name === label)
-    return (
-      <div className="bg-white border border-slate-200 rounded-lg p-3 shadow-lg text-xs">
-        <p className="font-semibold text-slate-800 mb-1">{d?.fullName}</p>
-        <p className="text-slate-600">{payload[0]?.value} total project(s)</p>
-      </div>
-    )
-  }
+  const maxTotal = Math.max(...researchers.map(r => r.total), 1)
+
+  if (researchers.length === 0) return (
+    <div className="card p-5">
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Workload per Researcher</h3>
+      <p className="text-sm text-slate-400 text-center py-6">No assigned projects yet</p>
+    </div>
+  )
 
   return (
     <div className="card p-5">
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Workload per Researcher</h3>
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={data} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-          <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="projects" radius={[4, 4, 0, 0]}>
-            {data.map((entry, i) => (
-              <Cell key={i} fill={entry.delayed > 0 ? '#fca5a5' : '#a5b4fc'} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="space-y-3">
+        {researchers.map(({ user: u, total, active, delayed, completed }) => (
+          <div key={u.id} className="flex items-center gap-3">
+            <Avatar user={u} size="sm" />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-medium text-slate-700 truncate">{u.name.split(' ')[0]}</span>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  {delayed > 0 && <span className="text-xs text-red-500 font-medium">{delayed} delayed</span>}
+                  {active > 0  && <span className="text-xs text-indigo-500 font-medium">{active} active</span>}
+                  <span className="text-xs text-slate-400">{total} total</span>
+                </div>
+              </div>
+              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${(total / maxTotal) * 100}%`,
+                    backgroundColor: delayed > 0 ? '#f87171' : active > 0 ? '#818cf8' : '#34d399',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
