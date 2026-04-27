@@ -38,7 +38,7 @@ function ProjectMiniCard({ project }) {
       <div className="flex items-center justify-between mt-3">
         <div className="flex items-center gap-2">
           <Avatar user={assignee} size="xs" />
-          <span className="text-xs text-slate-500">{assignee?.name?.split(' ').slice(-1)[0] ?? 'Unassigned'}</span>
+          <span className="text-xs text-slate-500">{assignee?.name?.split(' ')[0] ?? 'Unassigned'}</span>
         </div>
         <div className={`flex items-center gap-1 text-xs ${overdue ? 'text-red-500 font-medium' : 'text-slate-400'}`}>
           {overdue && <AlertTriangle size={11} />}
