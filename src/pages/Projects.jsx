@@ -109,10 +109,10 @@ export default function Projects() {
   const [editProject, setEditProject]   = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
 
-  const canCreate = user?.role === 'admin'
+  const canCreate = ['admin', 'pi', 'research_fellow'].includes(user?.role)
 
   const visibleProjects = projects
-    .filter(p => user?.role === 'student'
+    .filter(p => ['student', 'research_fellow'].includes(user?.role)
       ? p.assignedTo === user.id || (p.teamMembers || []).includes(user.id)
       : true)
     .filter(p => statusFilter === 'all' || p.status === statusFilter)

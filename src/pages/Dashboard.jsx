@@ -88,7 +88,7 @@ export default function Dashboard() {
   const { projects, stages, users } = useData()
   const { user } = useAuth()
 
-  const visibleProjects = user?.role === 'student'
+  const visibleProjects = ['student', 'research_fellow'].includes(user?.role)
     ? projects.filter(p => p.assignedTo === user.id || (p.teamMembers || []).includes(user.id))
     : projects
 
@@ -98,7 +98,7 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle={`Welcome back, ${user?.name?.split(' ')[0]} — ${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}`}
         actions={
-          user?.role === 'admin' && (
+          ['admin', 'pi', 'research_fellow'].includes(user?.role) && (
             <Link to="/projects">
               <Button icon={Plus} size="sm">New Project</Button>
             </Link>
@@ -119,7 +119,7 @@ export default function Dashboard() {
           <div className="xl:col-span-2">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-slate-800">
-                {user?.role === 'student' ? 'Your Projects' : 'All Projects'}
+                {['student', 'research_fellow'].includes(user?.role) ? 'Your Projects' : 'All Projects'}
               </h2>
               <Link to="/projects" className="text-sm text-brand-500 hover:text-brand-600 font-medium flex items-center gap-1">
                 View all <ArrowRight size={14} />
@@ -136,7 +136,7 @@ export default function Dashboard() {
           <div className="space-y-4">
             <StatusPie projects={visibleProjects} />
             <StageDistribution stages={stages.filter(s => visibleProjects.some(p => p.id === s.projectId))} />
-            {user?.role !== 'student' && (
+            {!['student', 'research_fellow'].includes(user?.role) && (
               <WorkloadBar projects={visibleProjects} users={users} />
             )}
           </div>

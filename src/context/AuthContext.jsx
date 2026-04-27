@@ -94,11 +94,13 @@ export function AuthProvider({ children }) {
     const name = sessionUser.user_metadata?.full_name
       || sessionUser.email.split('@')[0]
     return {
-      id:       sessionUser.id,
-      email:    sessionUser.email,
+      id:          sessionUser.id,
+      email:       sessionUser.email,
       name,
-      role:     sessionUser.user_metadata?.role || 'student',
-      initials: name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+      role:        sessionUser.user_metadata?.role || 'student',
+      initials:    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+      orcid:       '',
+      affiliation: '',
     }
   }
 

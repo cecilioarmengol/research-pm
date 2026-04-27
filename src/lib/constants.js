@@ -19,9 +19,10 @@ export const STATUS = {
 }
 
 export const ROLES = {
-  admin:   { label: 'Admin',                  color: 'bg-brand-100 text-brand-700' },
-  pi:      { label: 'Principal Investigator', color: 'bg-purple-100 text-purple-700' },
-  student: { label: 'Student / Resident',     color: 'bg-teal-100 text-teal-700' },
+  admin:            { label: 'Admin',                  color: 'bg-brand-100 text-brand-700'   },
+  pi:               { label: 'Principal Investigator', color: 'bg-purple-100 text-purple-700' },
+  research_fellow:  { label: 'Research Fellow',        color: 'bg-amber-100 text-amber-700'   },
+  student:          { label: 'Student / Resident',     color: 'bg-teal-100 text-teal-700'     },
 }
 
 export const AVATAR_COLORS = [

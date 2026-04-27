@@ -58,9 +58,11 @@ export const mapComment = c => ({
 })
 
 export const mapUser = u => ({
-  id:       u.id,
-  email:    u.email,
-  name:     u.full_name || u.email?.split('@')[0] || 'Unknown',
-  role:     u.role || 'student',
-  initials: u.initials || (u.full_name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+  id:          u.id,
+  email:       u.email,
+  name:        u.full_name || u.email?.split('@')[0] || 'Unknown',
+  role:        u.role || 'student',
+  initials:    u.initials || (u.full_name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+  orcid:       u.orcid       || '',
+  affiliation: u.affiliation || '',
 })

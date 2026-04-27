@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { User, Mail, Shield, Save, CheckCircle, Lock, Eye, EyeOff } from 'lucide-react'
+import { User, Mail, Shield, Save, CheckCircle, Lock, Eye, EyeOff, Building2, BadgeCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { supabase, DEMO_MODE } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
@@ -11,11 +11,13 @@ import Avatar from '../components/ui/Avatar'
 export default function Profile() {
   const { user, setUser } = useAuth()
 
-  // ── Name form ──────────────────────────────────────────────────────────────
-  const [fullName, setFullName] = useState(user?.name || '')
-  const [saving, setSaving]     = useState(false)
-  const [saved, setSaved]       = useState(false)
-  const [error, setError]       = useState('')
+  // ── Profile form ───────────────────────────────────────────────────────────
+  const [fullName,    setFullName]    = useState(user?.name        || '')
+  const [orcid,       setOrcid]       = useState(user?.orcid       || '')
+  const [affiliation, setAffiliation] = useState(user?.affiliation || '')
+  const [saving, setSaving]           = useState(false)
+  const [saved, setSaved]             = useState(false)
+  const [error, setError]             = useState('')
 
   async function handleSave(e) {
     e.preventDefault()
@@ -26,11 +28,15 @@ export default function Profile() {
       if (!DEMO_MODE) {
         const { error: err } = await supabase
           .from('profiles')
-          .update({ full_name: fullName.trim() })
+          .update({
+            full_name:   fullName.trim(),
+            orcid:       orcid.trim()       || null,
+            affiliation: affiliation.trim() || null,
+          })
           .eq('id', user.id)
         if (err) throw err
       }
-      setUser(prev => ({ ...prev, name: fullName.trim() }))
+      setUser(prev => ({ ...prev, name: fullName.trim(), orcid: orcid.trim(), affiliation: affiliation.trim() }))
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch {
@@ -137,11 +143,46 @@ export default function Profile() {
                 <Shield size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   className="input-base pl-9 bg-slate-50 cursor-not-allowed capitalize"
-                  value={user?.role === 'pi' ? 'Principal Investigator' : user?.role === 'admin' ? 'Admin' : 'Student / Resident'}
+                  value={
+                    user?.role === 'pi'              ? 'Principal Investigator' :
+                    user?.role === 'admin'           ? 'Admin' :
+                    user?.role === 'research_fellow' ? 'Research Fellow' :
+                                                       'Student / Resident'
+                  }
                   disabled
                 />
               </div>
               <p className="text-xs text-slate-400 mt-1">Role is assigned by the admin.</p>
+            </div>
+
+            <div>
+              <label className="label">Affiliation</label>
+              <div className="relative">
+                <Building2 size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input-base pl-9"
+                  value={affiliation}
+                  onChange={e => setAffiliation(e.target.value)}
+                  placeholder="e.g. Johns Hopkins Hospital, Dept. of Neurosurgery"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="label">ORCID iD</label>
+              <div className="relative">
+                <BadgeCheck size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input-base pl-9"
+                  value={orcid}
+                  onChange={e => setOrcid(e.target.value)}
+                  placeholder="e.g. 0000-0002-1825-0097"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Your 16-digit ORCID identifier. Find it at{' '}
+                <a href="https://orcid.org" target="_blank" rel="noreferrer" className="text-brand-500 hover:underline">orcid.org</a>
+              </p>
             </div>
 
             <div className="pt-2">

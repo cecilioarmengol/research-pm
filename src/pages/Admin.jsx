@@ -69,6 +69,7 @@ function UserForm({ initial, onClose, onSave, saving, error: outerError }) {
         <label className="label">Role</label>
         <select className="input-base" value={form.role} onChange={e => set('role', e.target.value)}>
           <option value="student">Student / Resident</option>
+          <option value="research_fellow">Research Fellow</option>
           <option value="pi">Principal Investigator</option>
           <option value="admin">Admin</option>
         </select>
