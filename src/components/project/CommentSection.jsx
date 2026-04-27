@@ -55,10 +55,10 @@ export default function CommentSection({ projectId }) {
                   {canDelete && confirmDelete !== c.id && (
                     <button
                       onClick={() => setConfirmDelete(c.id)}
-                      className="p-1 text-slate-300 hover:text-red-400 transition-colors shrink-0"
+                      className="p-1 text-red-400 hover:text-red-600 transition-colors shrink-0"
                       title="Delete message"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={15} />
                     </button>
                   )}
                 </div>
