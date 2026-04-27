@@ -12,7 +12,9 @@ function StageIcon({ status }) {
 export default function StageTimeline({ project, stages }) {
   const { dispatch } = useData()
   const { user }     = useAuth()
-  const canEdit      = user?.role === 'admin' || user?.id === project?.assignedTo
+  const canEdit      = user?.role === 'admin'
+    || user?.id === project?.assignedTo
+    || (project?.teamMembers || []).includes(user?.id)
 
   function cycleStatus(stage) {
     if (!canEdit) return
