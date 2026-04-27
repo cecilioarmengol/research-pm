@@ -76,8 +76,8 @@ export default function GanttChart({ projects }) {
                 <div key={project.id} className="flex items-center gap-0 group">
                   {/* Label */}
                   <div className="w-48 shrink-0 pr-4">
-                    <p className="text-xs font-medium text-slate-700 truncate leading-tight">{project.title.split(':').slice(-1)[0].trim()}</p>
-                    <p className="text-xs text-slate-400 truncate">{user?.name?.split(' ').slice(-1)[0]}</p>
+                    <p className="text-xs font-medium text-slate-700 truncate leading-tight">{project.title}</p>
+                    <p className="text-xs text-slate-400 truncate">{user?.name?.split(' ')[0]}</p>
                   </div>
 
                   {/* Bar area */}

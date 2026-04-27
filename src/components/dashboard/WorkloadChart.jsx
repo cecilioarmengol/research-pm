@@ -3,9 +3,9 @@ import { STATUS, STAGES } from '../../lib/constants'
 
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
-  const students = users.filter(u => u.role === 'student')
+  const students = users.filter(u => ['student', 'research_fellow'].includes(u.role))
   const data = students.map(u => ({
-    name: u.name.split(' ').slice(-1)[0], // last name only
+    name: u.name.split(' ')[0], // first name only
     fullName: u.name,
     projects: projects.filter(p => p.assignedTo === u.id).length,
     active: projects.filter(p => p.assignedTo === u.id && p.status === 'in_progress').length,
