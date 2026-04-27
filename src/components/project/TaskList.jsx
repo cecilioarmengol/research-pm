@@ -134,7 +134,9 @@ function StageSection({ stage, tasks, canEdit }) {
 export default function TaskList({ project, stages }) {
   const { getTasksForStage } = useData()
   const { user }             = useAuth()
-  const canEdit              = user?.role === 'admin' || user?.id === project?.assignedTo
+  const canEdit              = user?.role === 'admin'
+    || user?.id === project?.assignedTo
+    || (project?.teamMembers || []).includes(user?.id)
 
   return (
     <div className="card p-5">
