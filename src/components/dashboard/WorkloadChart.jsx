@@ -45,6 +45,7 @@ export function WorkloadBar({ projects, users }) {
 
 // ── Status distribution pie ───────────────────────────────────────────────────
 export function StatusPie({ projects }) {
+  const total = projects.length
   const data = [
     { name: 'Not Started', value: projects.filter(p => p.status === 'not_started').length, fill: '#cbd5e1' },
     { name: 'In Progress',  value: projects.filter(p => p.status === 'in_progress').length,  fill: '#818cf8' },
@@ -54,10 +55,11 @@ export function StatusPie({ projects }) {
 
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null
+    const pct = total ? Math.round((payload[0].value / total) * 100) : 0
     return (
       <div className="bg-white border border-slate-200 rounded-lg p-2.5 shadow-lg text-xs">
         <p className="font-medium text-slate-700">{payload[0].name}</p>
-        <p className="text-slate-500">{payload[0].value} project(s)</p>
+        <p className="text-slate-500">{payload[0].value} project{payload[0].value !== 1 ? 's' : ''} · {pct}%</p>
       </div>
     )
   }
@@ -72,9 +74,24 @@ export function StatusPie({ projects }) {
             {data.map((entry, i) => <Cell key={i} fill={entry.fill} stroke="none" />)}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, color: '#64748b' }} />
         </PieChart>
       </ResponsiveContainer>
+
+      {/* Legend with counts and percentages */}
+      <div className="space-y-1.5 mt-2">
+        {data.map(d => {
+          const pct = total ? Math.round((d.value / total) * 100) : 0
+          return (
+            <div key={d.name} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.fill }} />
+                <span className="text-slate-600">{d.name}</span>
+              </div>
+              <span className="font-medium text-slate-700">{d.value} <span className="text-slate-400 font-normal">({pct}%)</span></span>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
