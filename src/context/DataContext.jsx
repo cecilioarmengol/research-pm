@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -17,7 +17,8 @@ function loadDemoState() {
   const { projects, stages, tasks } = buildInitialData()
   return {
     projects, stages, tasks,
-    comments: SEED_COMMENTS,
+    comments:  SEED_COMMENTS,
+    protocols: [],
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -80,6 +81,12 @@ function demoReducer(state, action) {
       return { ...state, comments: [...state.comments, { id: uid(), createdAt: new Date().toISOString(), ...action.payload }] }
     case 'DELETE_COMMENT':
       return { ...state, comments: state.comments.filter(c => c.id !== action.payload.id) }
+    case 'ADD_PROTOCOL':
+      return { ...state, protocols: [...(state.protocols || []), { id: uid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...action.payload }] }
+    case 'UPDATE_PROTOCOL':
+      return { ...state, protocols: (state.protocols || []).map(p => p.id === action.payload.id ? { ...p, ...action.payload, updatedAt: new Date().toISOString() } : p) }
+    case 'DELETE_PROTOCOL':
+      return { ...state, protocols: (state.protocols || []).filter(p => p.id !== action.payload.id) }
     case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
     case 'UPDATE_USER':
@@ -96,6 +103,7 @@ function useSupabaseData(user) {
   const [stages,    setStages]    = useState([])
   const [tasks,     setTasks]     = useState([])
   const [comments,  setComments]  = useState([])
+  const [protocols, setProtocols] = useState([])
   const [users,     setUsers]     = useState([])
   const [loading,   setLoading]   = useState(true)
 
@@ -109,6 +117,7 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages' },() => loadStages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' },         () => loadTasks())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },      () => loadComments())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },     () => loadProtocols())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },      () => loadUsers())
       .subscribe()
 
@@ -117,7 +126,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadUsers()])
     setLoading(false)
   }
 
@@ -136,6 +145,10 @@ function useSupabaseData(user) {
   async function loadComments() {
     const { data } = await supabase.from('comments').select('*').order('created_at')
     if (data) setComments(data.map(mapComment))
+  }
+  async function loadProtocols() {
+    const { data } = await supabase.from('protocols').select('*').order('created_at')
+    if (data) setProtocols(data.map(mapProtocol))
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -266,6 +279,45 @@ function useSupabaseData(user) {
         await loadComments()
         break
 
+      case 'ADD_PROTOCOL':
+        await supabase.from('protocols').insert({
+          title:            action.payload.title,
+          protocol_number:  action.payload.protocolNumber  || null,
+          project_id:       action.payload.projectId       || null,
+          pi_id:            action.payload.piId            || null,
+          ethics_committee: action.payload.ethicsCommittee || null,
+          submission_date:  action.payload.submissionDate  || null,
+          expiration_date:  action.payload.expirationDate  || null,
+          approval_number:  action.payload.approvalNumber  || null,
+          notes:            action.payload.notes           || null,
+          created_by:       action.payload.createdBy,
+        })
+        await loadProtocols()
+        break
+
+      case 'UPDATE_PROTOCOL': {
+        const { id, title, protocolNumber, projectId, piId, ethicsCommittee, submissionDate, expirationDate, approvalNumber, notes } = action.payload
+        await supabase.from('protocols').update({
+          title,
+          protocol_number:  protocolNumber  || null,
+          project_id:       projectId       || null,
+          pi_id:            piId            || null,
+          ethics_committee: ethicsCommittee || null,
+          submission_date:  submissionDate  || null,
+          expiration_date:  expirationDate  || null,
+          approval_number:  approvalNumber  || null,
+          notes:            notes           || null,
+          updated_at:       new Date().toISOString(),
+        }).eq('id', id)
+        await loadProtocols()
+        break
+      }
+
+      case 'DELETE_PROTOCOL':
+        await supabase.from('protocols').delete().eq('id', action.payload.id)
+        await loadProtocols()
+        break
+
       case 'UPDATE_USER':
         await supabase.from('profiles').update({
           full_name: action.payload.name,
@@ -284,7 +336,7 @@ function useSupabaseData(user) {
     }
   }
 
-  return { projects, stages, tasks, comments, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

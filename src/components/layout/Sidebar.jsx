@@ -1,15 +1,16 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderKanban, Users, BookUser,
+  LayoutDashboard, FolderKanban, Users, BookUser, ClipboardList,
   Brain, LogOut,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
 
 const navItems = [
-  { to: '/',        label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/projects', label: 'Projects',  icon: FolderKanban   },
-  { to: '/team',    label: 'Directory',  icon: BookUser        },
+  { to: '/',           label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/projects',   label: 'Projects',  icon: FolderKanban    },
+  { to: '/team',       label: 'Directory', icon: BookUser         },
+  { to: '/protocols',  label: 'Protocols', icon: ClipboardList, roles: ['admin', 'pi', 'research_fellow'] },
 ]
 
 const adminItems = [
@@ -44,7 +45,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <p className="text-slate-600 text-xs uppercase font-semibold tracking-wider px-3 mb-2">Main</p>
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(({ to, label, icon: Icon }) => (
           <NavLink key={to} to={to} end={to === '/'} className={linkClass}>
             <Icon size={18} className="shrink-0" />
             <span>{label}</span>

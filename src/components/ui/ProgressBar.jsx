@@ -1,12 +1,7 @@
 export default function ProgressBar({ value = 0, showLabel = true, size = 'md', colorOverride }) {
   const clampedValue = Math.min(100, Math.max(0, value))
 
-  const color = colorOverride
-    ? colorOverride
-    : clampedValue === 100  ? '#10b981'
-    : clampedValue >= 60    ? '#6366f1'
-    : clampedValue >= 30    ? '#3b82f6'
-    : '#94a3b8'
+  const color = colorOverride ? colorOverride : '#10b981'
 
   const heights = { sm: 'h-1.5', md: 'h-2', lg: 'h-3' }
 

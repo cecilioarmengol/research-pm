@@ -57,6 +57,22 @@ export const mapComment = c => ({
   createdAt: c.created_at,
 })
 
+export const mapProtocol = p => ({
+  id:              p.id,
+  title:           p.title,
+  protocolNumber:  p.protocol_number  || '',
+  projectId:       p.project_id       || null,
+  piId:            p.pi_id            || null,
+  ethicsCommittee: p.ethics_committee || '',
+  submissionDate:  p.submission_date  || null,
+  expirationDate:  p.expiration_date  || null,
+  approvalNumber:  p.approval_number  || '',
+  notes:           p.notes            || '',
+  createdBy:       p.created_by,
+  createdAt:       p.created_at,
+  updatedAt:       p.updated_at,
+})
+
 export const mapUser = u => ({
   id:          u.id,
   email:       u.email,
