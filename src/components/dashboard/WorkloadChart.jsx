@@ -13,7 +13,6 @@ export function WorkloadBar({ projects, users }) {
       delayed:   projects.filter(p => p.assignedTo === u.id && p.status === 'delayed').length,
       completed: projects.filter(p => p.assignedTo === u.id && p.status === 'completed').length,
     }))
-    .filter(r => r.total > 0)
     .sort((a, b) => b.active - a.active || b.total - a.total)
 
   const maxTotal = Math.max(...researchers.map(r => r.total), 1)
@@ -21,7 +20,7 @@ export function WorkloadBar({ projects, users }) {
   if (researchers.length === 0) return (
     <div className="card p-5">
       <h3 className="text-sm font-semibold text-slate-700 mb-2">Workload per Researcher</h3>
-      <p className="text-sm text-slate-400 text-center py-6">No assigned projects yet</p>
+      <p className="text-sm text-slate-400 text-center py-6">No team members yet</p>
     </div>
   )
 
@@ -36,16 +35,17 @@ export function WorkloadBar({ projects, users }) {
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-slate-700 truncate">{u.name.split(' ')[0]}</span>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
+                  {total === 0 && <span className="text-xs text-emerald-500 font-medium">Available</span>}
                   {delayed > 0 && <span className="text-xs text-red-500 font-medium">{delayed} delayed</span>}
                   {active > 0  && <span className="text-xs text-indigo-500 font-medium">{active} active</span>}
-                  <span className="text-xs text-slate-400">{total} total</span>
+                  {total > 0   && <span className="text-xs text-slate-400">{total} total</span>}
                 </div>
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{
-                    width: `${(total / maxTotal) * 100}%`,
+                    width: total === 0 ? '0%' : `${(total / maxTotal) * 100}%`,
                     backgroundColor: delayed > 0 ? '#f87171' : active > 0 ? '#818cf8' : '#34d399',
                   }}
                 />
