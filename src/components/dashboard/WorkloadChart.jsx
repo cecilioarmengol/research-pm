@@ -1,57 +1,40 @@
 import { PieChart, Pie, Legend, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { STATUS, STAGES } from '../../lib/constants'
 import Avatar from '../ui/Avatar'
-
-const STATUS_DOT = {
-  in_progress: { color: '#818cf8', label: 'Active'    },
-  delayed:     { color: '#f87171', label: 'Delayed'   },
-  completed:   { color: '#34d399', label: 'Completed' },
-  not_started: { color: '#cbd5e1', label: 'Not started' },
-}
+import { StatusBadge } from '../ui/Badge'
 
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
-  const everyone = users.filter(u => ['student', 'research_fellow', 'pi', 'admin'].includes(u.role))
+  const rows = users
+    .filter(u => ['student', 'research_fellow', 'pi', 'admin'].includes(u.role))
+    .map(u => ({ user: u, projects: projects.filter(p => p.assignedTo === u.id) }))
+    .filter(r => r.projects.length > 0)
+    .sort((a, b) => b.projects.length - a.projects.length)
 
-  const rows = everyone.map(u => ({
-    user:     u,
-    projects: projects.filter(p => p.assignedTo === u.id),
-  })).sort((a, b) => b.projects.length - a.projects.length)
-
-  if (rows.length === 0) return null
+  if (rows.length === 0) return (
+    <div className="card p-5">
+      <h3 className="text-sm font-semibold text-slate-700 mb-2">Team Assignments</h3>
+      <p className="text-sm text-slate-400 text-center py-4">No projects assigned yet</p>
+    </div>
+  )
 
   return (
     <div className="card p-5">
-      <h3 className="text-sm font-semibold text-slate-700 mb-1">Workload per Researcher</h3>
-
-      {/* Legend */}
-      <div className="flex flex-wrap gap-3 mb-4">
-        {Object.entries(STATUS_DOT).map(([, { color, label }]) => (
-          <div key={label} className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-            <span className="text-xs text-slate-400">{label}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-2.5">
+      <h3 className="text-sm font-semibold text-slate-700 mb-4">Team Assignments</h3>
+      <div className="space-y-3">
         {rows.map(({ user: u, projects: ups }) => (
-          <div key={u.id} className="flex items-center gap-3">
+          <div key={u.id} className="flex gap-3">
             <Avatar user={u} size="sm" />
-            <span className="text-xs font-medium text-slate-700 w-20 shrink-0 truncate">{u.name.split(' ')[0]}</span>
-            <div className="flex flex-wrap gap-1.5 flex-1">
-              {ups.length === 0 ? (
-                <span className="text-xs text-slate-300 italic">No projects</span>
-              ) : (
-                ups.map(p => (
-                  <span
-                    key={p.id}
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ backgroundColor: STATUS_DOT[p.status]?.color ?? '#cbd5e1' }}
-                    title={p.title}
-                  />
-                ))
-              )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-slate-700 mb-1">{u.name}</p>
+              <div className="space-y-1">
+                {ups.map(p => (
+                  <div key={p.id} className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-slate-500 truncate">{p.title}</p>
+                    <StatusBadge status={p.status} />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         ))}
