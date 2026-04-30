@@ -290,13 +290,15 @@ function useSupabaseData(user) {
           expiration_date:  action.payload.expirationDate  || null,
           approval_number:  action.payload.approvalNumber  || null,
           notes:            action.payload.notes           || null,
+          file_url:         action.payload.fileUrl         || null,
+          file_name:        action.payload.fileName        || null,
           created_by:       action.payload.createdBy,
         })
         await loadProtocols()
         break
 
       case 'UPDATE_PROTOCOL': {
-        const { id, title, protocolNumber, projectId, piId, ethicsCommittee, submissionDate, expirationDate, approvalNumber, notes } = action.payload
+        const { id, title, protocolNumber, projectId, piId, ethicsCommittee, submissionDate, expirationDate, approvalNumber, notes, fileUrl, fileName } = action.payload
         await supabase.from('protocols').update({
           title,
           protocol_number:  protocolNumber  || null,
@@ -307,6 +309,8 @@ function useSupabaseData(user) {
           expiration_date:  expirationDate  || null,
           approval_number:  approvalNumber  || null,
           notes:            notes           || null,
+          file_url:         fileUrl         || null,
+          file_name:        fileName        || null,
           updated_at:       new Date().toISOString(),
         }).eq('id', id)
         await loadProtocols()
@@ -314,6 +318,9 @@ function useSupabaseData(user) {
       }
 
       case 'DELETE_PROTOCOL':
+        if (action.payload.filePath) {
+          await supabase.storage.from('protocols').remove([action.payload.filePath])
+        }
         await supabase.from('protocols').delete().eq('id', action.payload.id)
         await loadProtocols()
         break

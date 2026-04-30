@@ -68,6 +68,8 @@ export const mapProtocol = p => ({
   expirationDate:  p.expiration_date  || null,
   approvalNumber:  p.approval_number  || '',
   notes:           p.notes            || '',
+  fileUrl:         p.file_url         || null,
+  fileName:        p.file_name        || null,
   createdBy:       p.created_by,
   createdAt:       p.created_at,
   updatedAt:       p.updated_at,
