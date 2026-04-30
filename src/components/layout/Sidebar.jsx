@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderKanban, Users,
+  LayoutDashboard, FolderKanban, Users, BookUser,
   Brain, LogOut,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -9,6 +9,7 @@ import Avatar from '../ui/Avatar'
 const navItems = [
   { to: '/',        label: 'Dashboard', icon: LayoutDashboard },
   { to: '/projects', label: 'Projects',  icon: FolderKanban   },
+  { to: '/team',    label: 'Directory',  icon: BookUser        },
 ]
 
 const adminItems = [

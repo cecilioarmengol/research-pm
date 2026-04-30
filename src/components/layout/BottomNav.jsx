@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, FolderKanban, Users, UserCircle } from 'lucide-react'
+import { LayoutDashboard, FolderKanban, BookUser, UserCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 export default function BottomNav() {
@@ -22,12 +22,10 @@ export default function BottomNav() {
         <span>Projects</span>
       </NavLink>
 
-      {user?.role === 'admin' && (
-        <NavLink to="/admin" className={linkClass}>
-          <Users size={22} />
-          <span>Team</span>
-        </NavLink>
-      )}
+      <NavLink to="/team" className={linkClass}>
+        <BookUser size={22} />
+        <span>Directory</span>
+      </NavLink>
 
       <NavLink to="/profile" className={linkClass}>
         <UserCircle size={22} />
