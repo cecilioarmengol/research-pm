@@ -5,7 +5,7 @@ import Avatar from '../ui/Avatar'
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
   const researchers = users
-    .filter(u => ['student', 'research_fellow', 'pi'].includes(u.role))
+    .filter(u => u.role !== undefined)
     .map(u => ({
       user: u,
       total:     projects.filter(p => p.assignedTo === u.id).length,
