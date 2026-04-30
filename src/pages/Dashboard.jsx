@@ -135,7 +135,6 @@ export default function Dashboard() {
           {/* Right sidebar */}
           <div className="space-y-4">
             <StatusPie projects={visibleProjects} />
-            <StageDistribution stages={stages.filter(s => visibleProjects.some(p => p.id === s.projectId))} />
             {!['student', 'research_fellow'].includes(user?.role) && (
               <WorkloadBar projects={visibleProjects} users={users} />
             )}
