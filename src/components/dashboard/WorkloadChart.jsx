@@ -36,12 +36,15 @@ export function WorkloadBar({ projects, users }) {
                         : active  > 0 ? 'bg-indigo-400'
                         : 'bg-emerald-400'
             return (
-              <div key={u.id} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border ${color}`} title={`${u.name} — ${active} active, ${total} total`}>
+              <div key={u.id} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border ${color}`}>
                 <Avatar user={u} size="xs" />
-                <span className="text-xs font-medium text-slate-700">{u.name.split(' ')[0]}</span>
-                <span className={`text-xs font-bold text-white px-1.5 py-0.5 rounded-full ${badge}`}>
-                  {total}
-                </span>
+                <div>
+                  <p className="text-xs font-medium text-slate-700 leading-tight">{u.name.split(' ')[0]}</p>
+                  <p className={`text-xs font-medium leading-tight ${delayed > 0 ? 'text-red-500' : active > 0 ? 'text-indigo-500' : 'text-emerald-500'}`}>
+                    {delayed > 0 ? `${delayed} delayed` : active > 0 ? `${active} active` : 'completed'}
+                    {total > 1 ? ` · ${total} projects` : ' · 1 project'}
+                  </p>
+                </div>
               </div>
             )
           })}
