@@ -4,15 +4,25 @@ import Avatar from '../ui/Avatar'
 
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
-  const researchers = users
-    .filter(u => u.role !== undefined)
-    .map(u => ({
-      user: u,
-      total:     projects.filter(p => p.assignedTo === u.id).length,
-      active:    projects.filter(p => p.assignedTo === u.id && p.status === 'in_progress').length,
-      delayed:   projects.filter(p => p.assignedTo === u.id && p.status === 'delayed').length,
-      completed: projects.filter(p => p.assignedTo === u.id && p.status === 'completed').length,
-    }))
+  // Build from projects so no assignee is ever missed
+  const assigneeIds = [...new Set(projects.map(p => p.assignedTo).filter(Boolean))]
+  const fromProjects = assigneeIds.map(id => {
+    const u = users.find(u => u.id === id) || { id, name: 'Unknown', initials: '?' }
+    return {
+      user:      u,
+      total:     projects.filter(p => p.assignedTo === id).length,
+      active:    projects.filter(p => p.assignedTo === id && p.status === 'in_progress').length,
+      delayed:   projects.filter(p => p.assignedTo === id && p.status === 'delayed').length,
+      completed: projects.filter(p => p.assignedTo === id && p.status === 'completed').length,
+    }
+  })
+
+  // Also include team members with no projects (show as Available)
+  const withNoProjects = users
+    .filter(u => !assigneeIds.includes(u.id) && ['student', 'research_fellow', 'pi'].includes(u.role))
+    .map(u => ({ user: u, total: 0, active: 0, delayed: 0, completed: 0 }))
+
+  const researchers = [...fromProjects, ...withNoProjects]
     .sort((a, b) => b.active - a.active || b.total - a.total)
 
   const maxTotal = Math.max(...researchers.map(r => r.total), 1)
