@@ -4,66 +4,67 @@ import Avatar from '../ui/Avatar'
 
 // ── Workload per researcher ────────────────────────────────────────────────────
 export function WorkloadBar({ projects, users }) {
-  // Build from projects so no assignee is ever missed
   const assigneeIds = [...new Set(projects.map(p => p.assignedTo).filter(Boolean))]
-  const fromProjects = assigneeIds.map(id => {
-    const u = users.find(u => u.id === id) || { id, name: 'Unknown', initials: '?' }
+
+  const busy = assigneeIds.map(id => {
+    const u = users.find(u => u.id === id) || { id, name: 'Unknown', initials: '?', role: 'student' }
     return {
-      user:      u,
-      total:     projects.filter(p => p.assignedTo === id).length,
-      active:    projects.filter(p => p.assignedTo === id && p.status === 'in_progress').length,
-      delayed:   projects.filter(p => p.assignedTo === id && p.status === 'delayed').length,
-      completed: projects.filter(p => p.assignedTo === id && p.status === 'completed').length,
+      user:    u,
+      active:  projects.filter(p => p.assignedTo === id && p.status === 'in_progress').length,
+      delayed: projects.filter(p => p.assignedTo === id && p.status === 'delayed').length,
+      total:   projects.filter(p => p.assignedTo === id).length,
     }
-  })
+  }).sort((a, b) => b.active - a.active || b.delayed - a.delayed)
 
-  // Also include team members with no projects (show as Available)
-  const withNoProjects = users
-    .filter(u => !assigneeIds.includes(u.id) && ['student', 'research_fellow', 'pi'].includes(u.role))
-    .map(u => ({ user: u, total: 0, active: 0, delayed: 0, completed: 0 }))
-
-  const researchers = [...fromProjects, ...withNoProjects]
-    .sort((a, b) => b.active - a.active || b.total - a.total)
-
-  const maxTotal = Math.max(...researchers.map(r => r.total), 1)
-
-  if (researchers.length === 0) return (
-    <div className="card p-5">
-      <h3 className="text-sm font-semibold text-slate-700 mb-2">Workload per Researcher</h3>
-      <p className="text-sm text-slate-400 text-center py-6">No team members yet</p>
-    </div>
+  const available = users.filter(u =>
+    !assigneeIds.includes(u.id) &&
+    ['student', 'research_fellow', 'pi'].includes(u.role)
   )
 
   return (
     <div className="card p-5">
       <h3 className="text-sm font-semibold text-slate-700 mb-4">Workload per Researcher</h3>
-      <div className="space-y-3">
-        {researchers.map(({ user: u, total, active, delayed, completed }) => (
-          <div key={u.id} className="flex items-center gap-3">
-            <Avatar user={u} size="sm" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-slate-700 truncate">{u.name.split(' ')[0]}</span>
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  {total === 0 && <span className="text-xs text-emerald-500 font-medium">Available</span>}
-                  {delayed > 0 && <span className="text-xs text-red-500 font-medium">{delayed} delayed</span>}
-                  {active > 0  && <span className="text-xs text-indigo-500 font-medium">{active} active</span>}
-                  {total > 0   && <span className="text-xs text-slate-400">{total} total</span>}
-                </div>
+
+      {/* Active researchers — chip grid */}
+      {busy.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {busy.map(({ user: u, active, delayed, total }) => {
+            const color = delayed > 0 ? 'border-red-200 bg-red-50'
+                        : active  > 0 ? 'border-indigo-200 bg-indigo-50'
+                        : 'border-slate-200 bg-slate-50'
+            const badge = delayed > 0 ? 'bg-red-400'
+                        : active  > 0 ? 'bg-indigo-400'
+                        : 'bg-emerald-400'
+            return (
+              <div key={u.id} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-xl border ${color}`} title={`${u.name} — ${active} active, ${total} total`}>
+                <Avatar user={u} size="xs" />
+                <span className="text-xs font-medium text-slate-700">{u.name.split(' ')[0]}</span>
+                <span className={`text-xs font-bold text-white px-1.5 py-0.5 rounded-full ${badge}`}>
+                  {total}
+                </span>
               </div>
-              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: total === 0 ? '0%' : `${(total / maxTotal) * 100}%`,
-                    backgroundColor: delayed > 0 ? '#f87171' : active > 0 ? '#818cf8' : '#34d399',
-                  }}
-                />
+            )
+          })}
+        </div>
+      )}
+
+      {/* Available — compact avatar row */}
+      {available.length > 0 && (
+        <div className="border-t border-slate-100 pt-3">
+          <p className="text-xs text-slate-400 mb-2">Available</p>
+          <div className="flex flex-wrap gap-1.5">
+            {available.map(u => (
+              <div key={u.id} title={u.name}>
+                <Avatar user={u} size="sm" />
               </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+
+      {busy.length === 0 && available.length === 0 && (
+        <p className="text-sm text-slate-400 text-center py-4">No team members yet</p>
+      )}
     </div>
   )
 }
