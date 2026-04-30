@@ -175,7 +175,7 @@ export default function Team() {
                 {isAdmin && (
                   <button
                     onClick={() => setEditMember(u)}
-                    className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-300 hover:text-brand-500 hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100"
+                    className="absolute top-3 right-3 p-1.5 rounded-lg text-slate-400 hover:text-brand-500 hover:bg-slate-100 transition-colors"
                     title="Edit member info"
                   >
                     <Edit2 size={13} />
