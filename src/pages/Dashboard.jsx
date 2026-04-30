@@ -135,9 +135,6 @@ export default function Dashboard() {
           {/* Right sidebar */}
           <div className="space-y-4">
             <StatusPie projects={visibleProjects} />
-            {!['student', 'research_fellow'].includes(user?.role) && (
-              <WorkloadBar projects={visibleProjects} users={users} />
-            )}
           </div>
         </div>
 
