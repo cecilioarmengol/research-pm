@@ -165,6 +165,7 @@ export default function Protocols() {
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [saving, setSaving]               = useState(false)
   const [filter, setFilter]               = useState('all')
+  const [formError, setFormError]         = useState('')
 
   const canManage = ['admin', 'pi', 'research_fellow'].includes(user?.role)
 
@@ -180,57 +181,54 @@ export default function Protocols() {
       return differenceInDays(parseISO(a.expirationDate), new Date()) - differenceInDays(parseISO(b.expirationDate), new Date())
     })
 
-  async function uploadFile(file, protocolId) {
-    const ext      = file.name.split('.').pop()
-    const path     = `${protocolId}/${Date.now()}.${ext}`
+  // Uploads file to private bucket and returns the storage path (not a public URL)
+  async function uploadFile(file) {
+    const ext  = file.name.split('.').pop()
+    const path = `${crypto.randomUUID()}.${ext}`
     const { error } = await supabase.storage.from('protocols').upload(path, file, { upsert: true })
-    if (error) throw error
-    const { data } = supabase.storage.from('protocols').getPublicUrl(path)
-    return { fileUrl: data.publicUrl, filePath: path, fileName: file.name }
+    if (error) throw new Error(error.message)
+    return path
   }
 
   async function handleSave(form, file, removeFile) {
     setSaving(true)
+    setFormError('')
     try {
-      let fileUrl  = removeFile ? null : (form.fileUrl  || null)
+      // fileUrl stores the storage PATH (not a public URL) for private buckets
+      let filePath = removeFile ? null : (form.fileUrl || null)
       let fileName = removeFile ? null : (form.fileName || null)
-      let filePath = null
 
       if (file && !DEMO_MODE) {
-        const protoId = editProto?.id || crypto.randomUUID()
-        const result  = await uploadFile(file, protoId)
-        fileUrl  = result.fileUrl
-        fileName = result.fileName
-        filePath = result.filePath
+        filePath = await uploadFile(file)
+        fileName = file.name
       }
 
       if (editProto) {
-        dispatch({ type: 'UPDATE_PROTOCOL', payload: { ...form, id: editProto.id, fileUrl, fileName } })
+        await dispatch({ type: 'UPDATE_PROTOCOL', payload: { ...form, id: editProto.id, fileUrl: filePath, fileName } })
       } else {
-        dispatch({ type: 'ADD_PROTOCOL', payload: { ...form, createdBy: user.id, fileUrl, fileName } })
+        await dispatch({ type: 'ADD_PROTOCOL', payload: { ...form, createdBy: user.id, fileUrl: filePath, fileName } })
       }
       setShowForm(false)
       setEditProto(null)
     } catch (err) {
-      console.error(err)
+      setFormError(err.message || 'Upload failed. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
   async function handleDelete(proto) {
-    const filePath = proto.fileUrl
-      ? proto.fileUrl.split('/protocols/')[1]
-      : null
-    dispatch({ type: 'DELETE_PROTOCOL', payload: { id: proto.id, filePath } })
+    // proto.fileUrl holds the storage path directly
+    dispatch({ type: 'DELETE_PROTOCOL', payload: { id: proto.id, filePath: proto.fileUrl } })
     setDeleteConfirm(null)
   }
 
   async function handleDownload(proto) {
     if (!proto.fileUrl) return
-    const path = proto.fileUrl.split('/protocols/')[1]
-    const { data } = await supabase.storage.from('protocols').createSignedUrl(path, 60)
-    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+    // proto.fileUrl is the storage path; generate a short-lived signed URL
+    const { data, error } = await supabase.storage.from('protocols').createSignedUrl(proto.fileUrl, 120)
+    if (error || !data?.signedUrl) { alert('Could not generate download link. Please try again.'); return }
+    window.open(data.signedUrl, '_blank')
   }
 
   const expiredCount  = protocols.filter(p => p.expirationDate && differenceInDays(parseISO(p.expirationDate), new Date()) < 0).length
@@ -356,13 +354,19 @@ export default function Protocols() {
       {/* Add / Edit modal */}
       <Modal
         isOpen={showForm}
-        onClose={() => { setShowForm(false); setEditProto(null) }}
+        onClose={() => { setShowForm(false); setEditProto(null); setFormError('') }}
         title={editProto ? 'Edit Protocol' : 'New Protocol'}
         size="lg"
       >
+        {formError && (
+          <div className="mb-3 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+            <AlertTriangle size={14} className="text-red-500 shrink-0" />
+            <p className="text-sm text-red-700">{formError}</p>
+          </div>
+        )}
         <ProtocolForm
           initial={editProto}
-          onClose={() => { setShowForm(false); setEditProto(null) }}
+          onClose={() => { setShowForm(false); setEditProto(null); setFormError('') }}
           onSave={handleSave}
           saving={saving}
           projects={projects}

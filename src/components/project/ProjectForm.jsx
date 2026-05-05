@@ -23,7 +23,6 @@ export default function ProjectForm({ initial, onClose }) {
 
   function set(field, value) { setForm(f => ({ ...f, [field]: value })) }
 
-  // When lead changes, remove that person from team members (can't be both)
   function setLead(newLeadId) {
     setForm(f => ({
       ...f,

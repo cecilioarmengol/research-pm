@@ -115,20 +115,23 @@ export default function Projects() {
     .filter(p => ['student', 'research_fellow'].includes(user?.role)
       ? p.assignedTo === user.id || (p.teamMembers || []).includes(user.id)
       : true)
+    .filter(p => p.status !== 'completed') // completed projects live in Publications
     .filter(p => statusFilter === 'all' || p.status === statusFilter)
     .filter(p => !search || p.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      const rank = { delayed: 0, in_progress: 1, not_started: 2, completed: 3 }
+      const rank = { delayed: 0, in_progress: 1, not_started: 2 }
       return (rank[a.status] ?? 9) - (rank[b.status] ?? 9)
     })
+
+  const completedCount = projects.filter(p => p.status === 'completed').length
 
   function handleDelete(project) {
     dispatch({ type: 'DELETE_PROJECT', payload: { id: project.id } })
     setDeleteConfirm(null)
   }
 
-  const statuses = ['all', 'not_started', 'in_progress', 'completed', 'delayed']
-  const statusLabels = { all: 'All', not_started: 'Not Started', in_progress: 'In Progress', completed: 'Completed', delayed: 'Delayed' }
+  const statuses = ['all', 'not_started', 'in_progress', 'delayed']
+  const statusLabels = { all: 'All', not_started: 'Not Started', in_progress: 'In Progress', delayed: 'Delayed' }
 
   return (
     <Layout>
@@ -141,6 +144,17 @@ export default function Projects() {
       />
 
       <div className="p-6 max-w-5xl">
+        {/* Completed projects banner */}
+        {completedCount > 0 && (
+          <Link to="/publications"
+            className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-5 hover:bg-emerald-100 transition-colors group">
+            <p className="text-sm text-emerald-700 font-medium">
+              🎉 {completedCount} completed project{completedCount !== 1 ? 's' : ''} — track publication status in Publications
+            </p>
+            <ArrowUpRight size={16} className="text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          </Link>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6">
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2 flex-1 min-w-48">

@@ -21,6 +21,7 @@ export const mapProject = p => ({
   deadline:    p.deadline,
   tags:        p.tags || [],
   teamMembers: p.team_members || [],
+  pubStatus:   p.pub_status   || null,
   createdAt:   p.created_at,
   updatedAt:   p.updated_at,
 })
@@ -83,4 +84,15 @@ export const mapUser = u => ({
   initials:    u.initials || (u.full_name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
   orcid:       u.orcid       || '',
   affiliation: u.affiliation || '',
+})
+
+export const mapSubmission = s => ({
+  id:             s.id,
+  projectId:      s.project_id,
+  journalName:    s.journal_name,
+  submissionDate: s.submission_date || null,
+  status:         s.status          || 'submitted',
+  decisionDate:   s.decision_date   || null,
+  notes:          s.notes           || '',
+  createdAt:      s.created_at,
 })

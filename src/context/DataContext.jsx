@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -17,8 +17,9 @@ function loadDemoState() {
   const { projects, stages, tasks } = buildInitialData()
   return {
     projects, stages, tasks,
-    comments:  SEED_COMMENTS,
-    protocols: [],
+    comments:    SEED_COMMENTS,
+    protocols:   [],
+    submissions: [],
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -87,6 +88,14 @@ function demoReducer(state, action) {
       return { ...state, protocols: (state.protocols || []).map(p => p.id === action.payload.id ? { ...p, ...action.payload, updatedAt: new Date().toISOString() } : p) }
     case 'DELETE_PROTOCOL':
       return { ...state, protocols: (state.protocols || []).filter(p => p.id !== action.payload.id) }
+    case 'UPDATE_PUB_STATUS':
+      return { ...state, projects: state.projects.map(p => p.id === action.payload.id ? { ...p, pubStatus: action.payload.pubStatus } : p) }
+    case 'ADD_SUBMISSION':
+      return { ...state, submissions: [...(state.submissions || []), { id: uid(), createdAt: new Date().toISOString(), ...action.payload }] }
+    case 'UPDATE_SUBMISSION':
+      return { ...state, submissions: (state.submissions || []).map(s => s.id === action.payload.id ? { ...s, ...action.payload } : s) }
+    case 'DELETE_SUBMISSION':
+      return { ...state, submissions: (state.submissions || []).filter(s => s.id !== action.payload.id) }
     case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
     case 'UPDATE_USER':
@@ -99,13 +108,14 @@ function demoReducer(state, action) {
 
 // ── Supabase mode ─────────────────────────────────────────────────────────────
 function useSupabaseData(user) {
-  const [projects,  setProjects]  = useState([])
-  const [stages,    setStages]    = useState([])
-  const [tasks,     setTasks]     = useState([])
-  const [comments,  setComments]  = useState([])
-  const [protocols, setProtocols] = useState([])
-  const [users,     setUsers]     = useState([])
-  const [loading,   setLoading]   = useState(true)
+  const [projects,     setProjects]     = useState([])
+  const [stages,       setStages]       = useState([])
+  const [tasks,        setTasks]        = useState([])
+  const [comments,     setComments]     = useState([])
+  const [protocols,   setProtocols]   = useState([])
+  const [submissions, setSubmissions] = useState([])
+  const [users,        setUsers]        = useState([])
+  const [loading,      setLoading]      = useState(true)
 
   useEffect(() => {
     if (!user) return
@@ -117,8 +127,9 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'project_stages' },() => loadStages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' },         () => loadTasks())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },      () => loadComments())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },     () => loadProtocols())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },      () => loadUsers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },          () => loadProtocols())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_submissions' },() => loadSubmissions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },           () => loadUsers())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -126,7 +137,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadUsers()])
     setLoading(false)
   }
 
@@ -149,6 +160,10 @@ function useSupabaseData(user) {
   async function loadProtocols() {
     const { data } = await supabase.from('protocols').select('*').order('created_at')
     if (data) setProtocols(data.map(mapProtocol))
+  }
+  async function loadSubmissions() {
+    const { data } = await supabase.from('journal_submissions').select('*').order('created_at', { ascending: false })
+    if (data) setSubmissions(data.map(mapSubmission))
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -279,8 +294,8 @@ function useSupabaseData(user) {
         await loadComments()
         break
 
-      case 'ADD_PROTOCOL':
-        await supabase.from('protocols').insert({
+      case 'ADD_PROTOCOL': {
+        const { error: addErr } = await supabase.from('protocols').insert({
           title:            action.payload.title,
           protocol_number:  action.payload.protocolNumber  || null,
           project_id:       action.payload.projectId       || null,
@@ -294,12 +309,14 @@ function useSupabaseData(user) {
           file_name:        action.payload.fileName        || null,
           created_by:       action.payload.createdBy,
         })
+        if (addErr) throw new Error(addErr.message)
         await loadProtocols()
         break
+      }
 
       case 'UPDATE_PROTOCOL': {
         const { id, title, protocolNumber, projectId, piId, ethicsCommittee, submissionDate, expirationDate, approvalNumber, notes, fileUrl, fileName } = action.payload
-        await supabase.from('protocols').update({
+        const { error: updErr } = await supabase.from('protocols').update({
           title,
           protocol_number:  protocolNumber  || null,
           project_id:       projectId       || null,
@@ -313,6 +330,7 @@ function useSupabaseData(user) {
           file_name:        fileName        || null,
           updated_at:       new Date().toISOString(),
         }).eq('id', id)
+        if (updErr) throw new Error(updErr.message)
         await loadProtocols()
         break
       }
@@ -323,6 +341,41 @@ function useSupabaseData(user) {
         }
         await supabase.from('protocols').delete().eq('id', action.payload.id)
         await loadProtocols()
+        break
+
+      case 'UPDATE_PUB_STATUS':
+        await supabase.from('projects').update({ pub_status: action.payload.pubStatus || null }).eq('id', action.payload.id)
+        await loadProjects()
+        break
+
+      case 'ADD_SUBMISSION':
+        await supabase.from('journal_submissions').insert({
+          project_id:      action.payload.projectId,
+          journal_name:    action.payload.journalName,
+          submission_date: action.payload.submissionDate || null,
+          status:          action.payload.status         || 'submitted',
+          decision_date:   action.payload.decisionDate   || null,
+          notes:           action.payload.notes          || '',
+        })
+        await loadSubmissions()
+        break
+
+      case 'UPDATE_SUBMISSION': {
+        const { id: subId, journalName, submissionDate, status: subStatus, decisionDate, notes } = action.payload
+        await supabase.from('journal_submissions').update({
+          journal_name:    journalName,
+          submission_date: submissionDate || null,
+          status:          subStatus,
+          decision_date:   decisionDate   || null,
+          notes:           notes          || '',
+        }).eq('id', subId)
+        await loadSubmissions()
+        break
+      }
+
+      case 'DELETE_SUBMISSION':
+        await supabase.from('journal_submissions').delete().eq('id', action.payload.id)
+        await loadSubmissions()
         break
 
       case 'UPDATE_USER':
@@ -343,7 +396,7 @@ function useSupabaseData(user) {
     }
   }
 
-  return { projects, stages, tasks, comments, protocols, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, submissions, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────
