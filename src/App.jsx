@@ -10,6 +10,7 @@ import Profile from './pages/Profile'
 import Team from './pages/Team'
 import Protocols from './pages/Protocols'
 import Publications from './pages/Publications'
+import Journals from './pages/Journals'
 
 function ProtectedRoute({ children, requireRole }) {
   const { user, loading } = useAuth()
@@ -31,6 +32,7 @@ function AppRoutes() {
       <Route path="/team" element={<ProtectedRoute><Team /></ProtectedRoute>} />
       <Route path="/protocols" element={<ProtectedRoute><Protocols /></ProtectedRoute>} />
       <Route path="/publications" element={<ProtectedRoute><Publications /></ProtectedRoute>} />
+      <Route path="/journals" element={<ProtectedRoute><Journals /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

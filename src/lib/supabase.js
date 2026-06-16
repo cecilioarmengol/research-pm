@@ -86,6 +86,29 @@ export const mapUser = u => ({
   affiliation: u.affiliation || '',
 })
 
+export const mapJournal = j => ({
+  id:              j.id,
+  name:            j.name,
+  issn:            j.issn             || '',
+  publisher:       j.publisher        || '',
+  editorInChief:   j.editor_in_chief  || '',
+  country:         j.country          || '',
+  impactFactor:    j.impact_factor    != null ? Number(j.impact_factor) : null,
+  scimagoQuartile: j.scimago_quartile || null,
+  openAccess:      j.open_access      || false,
+  apcUsd:          j.apc_usd          != null ? j.apc_usd : null,
+  avgReviewWeeks:  j.avg_review_weeks != null ? j.avg_review_weeks : null,
+  acceptanceRate:  j.acceptance_rate  != null ? j.acceptance_rate : null,
+  submissionUrl:   j.submission_url   || '',
+  scope:           j.scope            || '',
+  specialtyTags:   j.specialty_tags   || [],
+  notes:           j.notes            || '',
+  isFavorite:      j.is_favorite      || false,
+  createdBy:       j.created_by,
+  createdAt:       j.created_at,
+  updatedAt:       j.updated_at,
+})
+
 export const mapSubmission = s => ({
   id:             s.id,
   projectId:      s.project_id,

@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -20,6 +20,7 @@ function loadDemoState() {
     comments:    SEED_COMMENTS,
     protocols:   [],
     submissions: [],
+    journals:    [],
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -96,6 +97,14 @@ function demoReducer(state, action) {
       return { ...state, submissions: (state.submissions || []).map(s => s.id === action.payload.id ? { ...s, ...action.payload } : s) }
     case 'DELETE_SUBMISSION':
       return { ...state, submissions: (state.submissions || []).filter(s => s.id !== action.payload.id) }
+    case 'ADD_JOURNAL':
+      return { ...state, journals: [...(state.journals || []), { id: uid(), createdAt: new Date().toISOString(), ...action.payload }] }
+    case 'UPDATE_JOURNAL':
+      return { ...state, journals: (state.journals || []).map(j => j.id === action.payload.id ? { ...j, ...action.payload } : j) }
+    case 'DELETE_JOURNAL':
+      return { ...state, journals: (state.journals || []).filter(j => j.id !== action.payload.id) }
+    case 'TOGGLE_JOURNAL_FAVORITE':
+      return { ...state, journals: (state.journals || []).map(j => j.id === action.payload.id ? { ...j, isFavorite: !j.isFavorite } : j) }
     case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
     case 'UPDATE_USER':
@@ -114,6 +123,7 @@ function useSupabaseData(user) {
   const [comments,     setComments]     = useState([])
   const [protocols,   setProtocols]   = useState([])
   const [submissions, setSubmissions] = useState([])
+  const [journals,    setJournals]    = useState([])
   const [users,        setUsers]        = useState([])
   const [loading,      setLoading]      = useState(true)
 
@@ -129,6 +139,7 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },      () => loadComments())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },          () => loadProtocols())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_submissions' },() => loadSubmissions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' },           () => loadJournals())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },           () => loadUsers())
       .subscribe()
 
@@ -137,7 +148,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadUsers()])
     setLoading(false)
   }
 
@@ -164,6 +175,10 @@ function useSupabaseData(user) {
   async function loadSubmissions() {
     const { data } = await supabase.from('journal_submissions').select('*').order('created_at', { ascending: false })
     if (data) setSubmissions(data.map(mapSubmission))
+  }
+  async function loadJournals() {
+    const { data } = await supabase.from('journals').select('*').order('impact_factor', { ascending: false, nullsFirst: false })
+    if (data) setJournals(data.map(mapJournal))
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -378,6 +393,65 @@ function useSupabaseData(user) {
         await loadSubmissions()
         break
 
+      case 'ADD_JOURNAL':
+        await supabase.from('journals').insert({
+          name:             action.payload.name,
+          issn:             action.payload.issn             || null,
+          publisher:        action.payload.publisher        || null,
+          editor_in_chief:  action.payload.editorInChief    || null,
+          country:          action.payload.country          || null,
+          impact_factor:    action.payload.impactFactor     != null ? action.payload.impactFactor : null,
+          scimago_quartile: action.payload.scimagoQuartile  || null,
+          open_access:      action.payload.openAccess       || false,
+          apc_usd:          action.payload.apcUsd           != null ? action.payload.apcUsd : null,
+          avg_review_weeks: action.payload.avgReviewWeeks   != null ? action.payload.avgReviewWeeks : null,
+          acceptance_rate:  action.payload.acceptanceRate   != null ? action.payload.acceptanceRate : null,
+          submission_url:   action.payload.submissionUrl    || null,
+          scope:            action.payload.scope            || null,
+          specialty_tags:   action.payload.specialtyTags   || [],
+          notes:            action.payload.notes            || null,
+          is_favorite:      false,
+          created_by:       user.id,
+        })
+        await loadJournals()
+        break
+
+      case 'UPDATE_JOURNAL': {
+        const { id: jId, ...jp } = action.payload
+        await supabase.from('journals').update({
+          name:             jp.name,
+          issn:             jp.issn             || null,
+          publisher:        jp.publisher        || null,
+          editor_in_chief:  jp.editorInChief    || null,
+          country:          jp.country          || null,
+          impact_factor:    jp.impactFactor     != null ? jp.impactFactor : null,
+          scimago_quartile: jp.scimagoQuartile  || null,
+          open_access:      jp.openAccess       || false,
+          apc_usd:          jp.apcUsd           != null ? jp.apcUsd : null,
+          avg_review_weeks: jp.avgReviewWeeks   != null ? jp.avgReviewWeeks : null,
+          acceptance_rate:  jp.acceptanceRate   != null ? jp.acceptanceRate : null,
+          submission_url:   jp.submissionUrl    || null,
+          scope:            jp.scope            || null,
+          specialty_tags:   jp.specialtyTags   || [],
+          notes:            jp.notes            || null,
+          updated_at:       new Date().toISOString(),
+        }).eq('id', jId)
+        await loadJournals()
+        break
+      }
+
+      case 'DELETE_JOURNAL':
+        await supabase.from('journals').delete().eq('id', action.payload.id)
+        await loadJournals()
+        break
+
+      case 'TOGGLE_JOURNAL_FAVORITE': {
+        const j = journals.find(j => j.id === action.payload.id)
+        if (j) await supabase.from('journals').update({ is_favorite: !j.isFavorite }).eq('id', j.id)
+        await loadJournals()
+        break
+      }
+
       case 'UPDATE_USER':
         await supabase.from('profiles').update({
           full_name: action.payload.name,
@@ -396,7 +470,7 @@ function useSupabaseData(user) {
     }
   }
 
-  return { projects, stages, tasks, comments, protocols, submissions, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, submissions, journals, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

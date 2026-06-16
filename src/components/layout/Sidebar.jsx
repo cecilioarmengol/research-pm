@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, Users, BookUser, ClipboardList,
-  Brain, LogOut, BookOpen,
+  Brain, LogOut, BookOpen, Library,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
@@ -12,6 +12,7 @@ const navItems = [
   { to: '/team',       label: 'Directory', icon: BookUser         },
   { to: '/protocols',    label: 'Protocols',    icon: ClipboardList, roles: ['admin', 'pi', 'research_fellow'] },
   { to: '/publications', label: 'Publications', icon: BookOpen },
+  { to: '/journals',     label: 'Journals',     icon: Library },
 ]
 
 const adminItems = [

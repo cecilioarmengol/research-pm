@@ -30,7 +30,7 @@ const SUB_STATUSES = {
 const EMPTY_SUB = { journalName: '', submissionDate: '', status: 'submitted', decisionDate: '', notes: '' }
 
 // ── Submission form ───────────────────────────────────────────────────────────
-function SubmissionForm({ initial, onClose, onSave }) {
+function SubmissionForm({ initial, onClose, onSave, journals = [] }) {
   const [form, setForm] = useState(initial || EMPTY_SUB)
   const [error, setError] = useState('')
   function set(k, v) { setForm(f => ({ ...f, [k]: v })) }
@@ -41,6 +41,8 @@ function SubmissionForm({ initial, onClose, onSave }) {
     onSave(form)
   }
 
+  const listId = 'journal-suggestions'
+
   return (
     <form onSubmit={submit} className="space-y-4">
       {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
@@ -48,7 +50,12 @@ function SubmissionForm({ initial, onClose, onSave }) {
       <div>
         <label className="label">Journal Name *</label>
         <input className="input-base" value={form.journalName} onChange={e => set('journalName', e.target.value)}
-          placeholder="e.g. New England Journal of Medicine" autoFocus />
+          list={listId} placeholder="Type or pick from your journal database" autoFocus />
+        {journals.length > 0 && (
+          <datalist id={listId}>
+            {journals.map(j => <option key={j.id} value={j.name} />)}
+          </datalist>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -90,7 +97,7 @@ function SubmissionForm({ initial, onClose, onSave }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Publications() {
-  const { projects, submissions = [], users, dispatch } = useData()
+  const { projects, submissions = [], journals = [], users, dispatch } = useData()
   const { user } = useAuth()
 
   const [filter,           setFilter]           = useState('all')
@@ -334,6 +341,7 @@ export default function Publications() {
           initial={editSub}
           onClose={() => { setShowSubForm(null); setEditSub(null) }}
           onSave={handleSaveSub}
+          journals={journals}
         />
       </Modal>
 
