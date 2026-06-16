@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { Plus, Search, Star, ExternalLink, Edit2, Trash2, ChevronDown, ChevronUp, Save, X } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -361,8 +361,8 @@ export default function Journals() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {filtered.map(j => (
-                    <>
-                      <tr key={j.id} className="hover:bg-slate-50 transition-colors group">
+                    <Fragment key={j.id}>
+                      <tr className="hover:bg-slate-50 transition-colors group">
                         {/* Favorite star */}
                         <td className="px-3 py-3 text-center">
                           <button onClick={() => dispatch({ type: 'TOGGLE_JOURNAL_FAVORITE', payload: { id: j.id } })}
@@ -420,8 +420,8 @@ export default function Journals() {
                           </div>
                         </td>
                       </tr>
-                      {expanded[j.id] && <JournalDetail key={`${j.id}-detail`} j={j} />}
-                    </>
+                      {expanded[j.id] && <JournalDetail j={j} />}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
