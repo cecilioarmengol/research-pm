@@ -1,16 +1,15 @@
 import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderKanban, Users, BookUser, ClipboardList,
+  LayoutDashboard, Users, BookUser, ClipboardList,
   Brain, LogOut, BookOpen, Library, LayoutGrid,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
 
 const navItems = [
-  { to: '/',           label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'research_fellow', 'student'] },
-  { to: '/projects',   label: 'Projects',  icon: FolderKanban,    roles: ['admin', 'research_fellow', 'student'] },
-  { to: '/team',       label: 'Directory', icon: BookUser,         roles: ['admin', 'research_fellow', 'student'] },
-  { to: '/protocols',  label: 'Protocols', icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
+  { to: '/',             label: 'Dashboard',    icon: LayoutDashboard, roles: ['admin', 'research_fellow', 'student'] },
+  { to: '/team',         label: 'Directory',    icon: BookUser,         roles: ['admin', 'research_fellow', 'student'] },
+  { to: '/protocols',    label: 'Protocols',    icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
   { to: '/publications', label: 'Publications', icon: BookOpen },
   { to: '/journals',     label: 'Journals',     icon: Library },
 ]
