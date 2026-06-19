@@ -1,18 +1,24 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, FolderKanban, Users, BookUser, ClipboardList,
-  Brain, LogOut, BookOpen, Library,
+  Brain, LogOut, BookOpen, Library, LayoutGrid,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
 
 const navItems = [
-  { to: '/',           label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/projects',   label: 'Projects',  icon: FolderKanban    },
-  { to: '/team',       label: 'Directory', icon: BookUser         },
-  { to: '/protocols',    label: 'Protocols',    icon: ClipboardList, roles: ['admin', 'pi', 'research_fellow'] },
+  { to: '/',           label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'research_fellow', 'student'] },
+  { to: '/projects',   label: 'Projects',  icon: FolderKanban,    roles: ['admin', 'research_fellow', 'student'] },
+  { to: '/team',       label: 'Directory', icon: BookUser,         roles: ['admin', 'research_fellow', 'student'] },
+  { to: '/protocols',  label: 'Protocols', icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
   { to: '/publications', label: 'Publications', icon: BookOpen },
   { to: '/journals',     label: 'Journals',     icon: Library },
+]
+
+const piNavItems = [
+  { to: '/pi-dashboard', label: 'Overview',      icon: LayoutGrid },
+  { to: '/publications', label: 'Publications',  icon: BookOpen   },
+  { to: '/journals',     label: 'Journals',      icon: Library    },
 ]
 
 const adminItems = [
@@ -47,22 +53,33 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         <p className="text-slate-600 text-xs uppercase font-semibold tracking-wider px-3 mb-2">Main</p>
-        {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(({ to, label, icon: Icon }) => (
-          <NavLink key={to} to={to} end={to === '/'} className={linkClass}>
-            <Icon size={18} className="shrink-0" />
-            <span>{label}</span>
-          </NavLink>
-        ))}
 
-        {user?.role === 'admin' && (
+        {user?.role === 'pi' ? (
+          piNavItems.map(({ to, label, icon: Icon }) => (
+            <NavLink key={to} to={to} className={linkClass}>
+              <Icon size={18} className="shrink-0" />
+              <span>{label}</span>
+            </NavLink>
+          ))
+        ) : (
           <>
-            <p className="text-slate-600 text-xs uppercase font-semibold tracking-wider px-3 mb-2 mt-5">Admin</p>
-            {adminItems.map(({ to, label, icon: Icon }) => (
-              <NavLink key={to} to={to} className={linkClass}>
+            {navItems.filter(item => !item.roles || item.roles.includes(user?.role)).map(({ to, label, icon: Icon }) => (
+              <NavLink key={to} to={to} end={to === '/'} className={linkClass}>
                 <Icon size={18} className="shrink-0" />
                 <span>{label}</span>
               </NavLink>
             ))}
+            {user?.role === 'admin' && (
+              <>
+                <p className="text-slate-600 text-xs uppercase font-semibold tracking-wider px-3 mb-2 mt-5">Admin</p>
+                {adminItems.map(({ to, label, icon: Icon }) => (
+                  <NavLink key={to} to={to} className={linkClass}>
+                    <Icon size={18} className="shrink-0" />
+                    <span>{label}</span>
+                  </NavLink>
+                ))}
+              </>
+            )}
           </>
         )}
       </nav>
