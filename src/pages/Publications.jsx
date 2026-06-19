@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookOpen, Send, ChevronDown, ChevronUp, Edit2, X, Save, Calendar } from 'lucide-react'
+import { BookOpen, Send, ChevronDown, ChevronUp, Edit2, X, Save, Calendar, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -100,13 +100,14 @@ export default function Publications() {
   const { projects, submissions = [], journals = [], users, dispatch } = useData()
   const { user } = useAuth()
 
-  const [filter,           setFilter]           = useState('all')
-  const [showSubForm,      setShowSubForm]      = useState(null) // project id
-  const [editSub,          setEditSub]          = useState(null)
-  const [editPubStatus,    setEditPubStatus]    = useState(null) // project id
-  const [pubStatusVal,     setPubStatusVal]     = useState('')
-  const [deleteSubConfirm, setDeleteSubConfirm] = useState(null)
-  const [expanded,         setExpanded]         = useState({})
+  const [filter,              setFilter]              = useState('all')
+  const [showSubForm,         setShowSubForm]         = useState(null)
+  const [editSub,             setEditSub]             = useState(null)
+  const [editPubStatus,       setEditPubStatus]       = useState(null)
+  const [pubStatusVal,        setPubStatusVal]        = useState('')
+  const [deleteSubConfirm,    setDeleteSubConfirm]    = useState(null)
+  const [deleteProjectConfirm,setDeleteProjectConfirm] = useState(null)
+  const [expanded,            setExpanded]            = useState({})
 
   const canManage = ['admin', 'pi', 'research_fellow'].includes(user?.role)
 
@@ -301,6 +302,14 @@ export default function Publications() {
                           }}>
                           Log Submission
                         </Button>
+                        {user?.role === 'admin' && (
+                          <Button variant="ghost" size="xs" icon={Trash2}
+                            className="hover:text-red-500 text-slate-300"
+                            onClick={() => setDeleteProjectConfirm(proj)}
+                            title="Delete project">
+                            Delete
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -343,6 +352,21 @@ export default function Publications() {
           onSave={handleSaveSub}
           journals={journals}
         />
+      </Modal>
+
+      {/* Delete project confirmation */}
+      <Modal isOpen={!!deleteProjectConfirm} onClose={() => setDeleteProjectConfirm(null)} title="Delete Project" size="sm">
+        <p className="text-sm text-slate-600 mb-6">
+          Are you sure you want to delete <strong>{deleteProjectConfirm?.title}</strong>?
+          This will also delete all stages, tasks, comments, and submission history. This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" onClick={() => setDeleteProjectConfirm(null)}>Cancel</Button>
+          <Button variant="danger" icon={Trash2} onClick={() => {
+            dispatch({ type: 'DELETE_PROJECT', payload: { id: deleteProjectConfirm.id } })
+            setDeleteProjectConfirm(null)
+          }}>Delete Project</Button>
+        </div>
       </Modal>
 
       {/* Delete submission confirmation */}
