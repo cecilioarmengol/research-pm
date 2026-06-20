@@ -22,6 +22,7 @@ export const mapProject = p => ({
   tags:        p.tags || [],
   teamMembers: p.team_members || [],
   pubStatus:   p.pub_status   || null,
+  projectType: p.project_type || null,
   createdAt:   p.created_at,
   updatedAt:   p.updated_at,
 })

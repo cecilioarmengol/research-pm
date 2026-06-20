@@ -29,9 +29,10 @@ function demoReducer(state, action) {
   switch (action.type) {
     case 'ADD_PROJECT': {
       const id = uid()
-      const projectStages = STAGES.map((s, i) => ({
+      const stageSource = action.payload.customStages || STAGES
+      const projectStages = stageSource.map((s, i) => ({
         id: uid(), projectId: id, stageKey: s.key, stageName: s.name,
-        order: i, status: 'pending', estimatedDays: [14,21,30,45,30,21,30,14][i],
+        order: i, status: 'pending', estimatedDays: 21,
         startDate: null, endDate: null,
       }))
       const projectTasks = projectStages.flatMap(stage =>
@@ -198,14 +199,15 @@ function useSupabaseData(user) {
           deadline: action.payload.deadline || null,
           tags: action.payload.tags || [],
           team_members: action.payload.teamMembers || [],
+          project_type: action.payload.projectType || null,
         }).select().single()
         if (error || !proj) return
 
-        // Insert all 8 stages
-        const stageRows = STAGES.map((s, i) => ({
+        const stageSource = action.payload.customStages || STAGES
+        const stageRows = stageSource.map((s, i) => ({
           project_id: proj.id, stage_key: s.key, stage_name: s.name,
           stage_order: i, status: 'pending',
-          estimated_days: [14,21,30,45,30,21,30,14][i],
+          estimated_days: 21,
         }))
         const { data: createdStages } = await supabase.from('project_stages').insert(stageRows).select()
 
@@ -224,13 +226,14 @@ function useSupabaseData(user) {
       }
 
       case 'UPDATE_PROJECT': {
-        const { id, title, description, assignedTo, status, startDate, deadline, tags, teamMembers } = action.payload
+        const { id, title, description, assignedTo, status, startDate, deadline, tags, teamMembers, projectType } = action.payload
         await supabase.from('projects').update({
           title, description,
           assigned_to: assignedTo || null,
           status, start_date: startDate || null,
           deadline: deadline || null, tags: tags || [],
           team_members: teamMembers || [],
+          project_type: projectType || null,
           updated_at: new Date().toISOString(),
         }).eq('id', id)
         await loadProjects()
