@@ -10,7 +10,7 @@ const navItems = [
   { to: '/',             label: 'Dashboard',    icon: LayoutDashboard, roles: ['admin', 'research_fellow', 'student'] },
   { to: '/team',         label: 'Directory',    icon: BookUser,         roles: ['admin', 'research_fellow', 'student'] },
   { to: '/protocols',    label: 'Protocols',    icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
-  { to: '/publications', label: 'Publications', icon: BookOpen },
+  { to: '/publications', label: 'Publications', icon: BookOpen, roles: ['admin', 'research_fellow'] },
   { to: '/journals',     label: 'Journals',     icon: Library },
 ]
 
