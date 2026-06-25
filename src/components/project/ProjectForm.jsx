@@ -214,6 +214,28 @@ export default function ProjectForm({ initial, onClose }) {
         </div>
 
         <div>
+          <label className="label">Team Members</label>
+          {teamCandidates.length === 0 ? (
+            <p className="text-xs text-slate-400 border border-slate-200 rounded-lg px-3 py-3 text-center">No other team members to add</p>
+          ) : (
+            <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-36 overflow-y-auto">
+              {teamCandidates.map(u => {
+                const checked = (form.teamMembers || []).includes(u.id)
+                return (
+                  <label key={u.id} className={`flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors ${checked ? 'bg-brand-50' : 'hover:bg-slate-50'}`}>
+                    <input type="checkbox" className="rounded border-slate-300 text-brand-500 shrink-0"
+                      checked={checked} onChange={() => toggleMember(u.id)} />
+                    <Avatar user={u} size="xs" />
+                    <span className="text-sm text-slate-700 flex-1">{u.name}</span>
+                    <RoleBadge role={u.role} />
+                  </label>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <div>
           <label className="label">Tags <span className="text-slate-400 font-normal">(comma-separated)</span></label>
           <input className="input-base" value={form.tags} onChange={e => set('tags', e.target.value)}
             placeholder="e.g. stroke, endovascular, meta-analysis" />
