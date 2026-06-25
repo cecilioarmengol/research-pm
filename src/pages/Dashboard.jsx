@@ -283,10 +283,15 @@ export default function Dashboard() {
 
   const today = new Date()
   const canCreate = ['admin', 'pi', 'research_fellow'].includes(user?.role)
+  const isRestricted = user?.role === 'student'
 
-  const publishedProjects   = projects.filter(p => p.pubStatus === 'accepted' || p.pubStatus === 'published')
-  const underReviewProjects = projects.filter(p => ['submitted', 'under_review', 'revision'].includes(p.pubStatus))
-  const inProgressProjects  = projects.filter(p => p.status !== 'completed')
+  const visibleProjects = isRestricted
+    ? projects.filter(p => p.assignedTo === user.id || (p.teamMembers || []).includes(user.id))
+    : projects
+
+  const publishedProjects   = visibleProjects.filter(p => p.pubStatus === 'accepted' || p.pubStatus === 'published')
+  const underReviewProjects = visibleProjects.filter(p => ['submitted', 'under_review', 'revision'].includes(p.pubStatus))
+  const inProgressProjects  = visibleProjects.filter(p => p.status !== 'completed')
   const activeProtocols     = protocols.filter(p => !p.expirationDate || new Date(p.expirationDate) >= today)
 
   const expiringCount = protocols.filter(p => {
