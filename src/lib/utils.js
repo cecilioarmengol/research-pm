@@ -3,7 +3,7 @@ import { STAGES, STATUS, AVATAR_COLORS } from './constants'
 
 export function calculateProgress(stages, tasks) {
   if (!stages || stages.length === 0) return 0
-  const stageCount = STAGES.length
+  const stageCount = stages.length
   let totalUnits = 0
 
   stages.forEach(stage => {
