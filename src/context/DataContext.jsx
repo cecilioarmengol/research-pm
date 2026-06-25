@@ -226,7 +226,7 @@ function useSupabaseData(user) {
       }
 
       case 'UPDATE_PROJECT': {
-        const { id, title, description, assignedTo, status, startDate, deadline, tags, teamMembers, projectType } = action.payload
+        const { id, title, description, assignedTo, status, startDate, deadline, tags, teamMembers, projectType, fileUrl, fileName } = action.payload
         await supabase.from('projects').update({
           title, description,
           assigned_to: assignedTo || null,
@@ -234,6 +234,8 @@ function useSupabaseData(user) {
           deadline: deadline || null, tags: tags || [],
           team_members: teamMembers || [],
           project_type: projectType || null,
+          file_url: fileUrl ?? null,
+          file_name: fileName ?? null,
           updated_at: new Date().toISOString(),
         }).eq('id', id)
         await loadProjects()
