@@ -16,7 +16,7 @@ const navItems = [
 
 const piNavItems = [
   { to: '/pi-dashboard', label: 'Overview',  icon: LayoutGrid },
-  { to: '/directory',    label: 'Directory', icon: Users      },
+  { to: '/team',         label: 'Directory', icon: BookUser   },
   { to: '/journals',     label: 'Journals',  icon: Library    },
 ]
 
