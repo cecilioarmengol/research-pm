@@ -360,24 +360,111 @@ export default function Dashboard() {
         }
       />
 
-      <div className="p-6 grid grid-cols-2 gap-4 max-w-xl">
-        {cards.map(card => {
-          const Icon = card.icon
-          return (
-            <button
-              key={card.key}
-              onClick={() => setActiveModal(card.key)}
-              className={`${card.bg} ${card.border} ${card.hover} border rounded-2xl p-6 text-left transition-all hover:shadow-md`}
-            >
-              <Icon size={22} className={`${card.iconColor} mb-4`} />
-              <div className={`text-5xl font-bold ${card.countColor} mb-2 leading-none`}>
-                {card.count}
-              </div>
-              <div className="text-sm font-semibold text-slate-700 leading-snug">{card.label}</div>
-              <div className="text-xs text-slate-400 mt-1">{card.sub}</div>
-            </button>
-          )
-        })}
+      <div className="p-6 grid grid-cols-2 gap-4 max-w-4xl">
+
+        {/* Accepted / Published */}
+        <button onClick={() => setActiveModal('published')}
+          className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl p-6 text-left transition-all group">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Accepted / Published</span>
+            <Trophy size={18} className="text-emerald-400" />
+          </div>
+          <div className="text-5xl font-bold text-emerald-700 leading-none mb-1">{publishedProjects.length}</div>
+          <div className="text-xs text-slate-400 mb-4">Research outputs</div>
+          <div className="border-t border-emerald-200 pt-3 flex flex-wrap gap-2">
+            {[['published','Published','bg-green-100 text-green-700'],['accepted','Accepted','bg-emerald-100 text-emerald-700']].map(([status, label, cls]) => {
+              const n = publishedProjects.filter(p => p.pubStatus === status).length
+              return n > 0 ? <span key={status} className={`px-2.5 py-1 rounded-full text-xs font-medium ${cls}`}>{n} {label}</span> : null
+            })}
+            {publishedProjects.length === 0 && <span className="text-xs text-slate-400 italic">None yet</span>}
+          </div>
+        </button>
+
+        {/* Under Review */}
+        <button onClick={() => setActiveModal('review')}
+          className="bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-2xl p-6 text-left transition-all group">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Under Review</span>
+            <Clock size={18} className="text-indigo-400" />
+          </div>
+          <div className="text-5xl font-bold text-indigo-700 leading-none mb-1">{underReviewProjects.length}</div>
+          <div className="text-xs text-slate-400 mb-4">In journal pipeline</div>
+          <div className="border-t border-indigo-200 pt-3 flex flex-wrap gap-2">
+            {[['revision','Revision','bg-orange-100 text-orange-700'],['under_review','Under Review','bg-amber-100 text-amber-700'],['submitted','Submitted','bg-indigo-100 text-indigo-700']].map(([status, label, cls]) => {
+              const n = underReviewProjects.filter(p => p.pubStatus === status).length
+              return n > 0 ? <span key={status} className={`px-2.5 py-1 rounded-full text-xs font-medium ${cls}`}>{n} {label}</span> : null
+            })}
+            {underReviewProjects.length === 0 && <span className="text-xs text-slate-400 italic">None yet</span>}
+          </div>
+        </button>
+
+        {/* In Progress */}
+        <button onClick={() => setActiveModal('progress')}
+          className="bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-2xl p-6 text-left transition-all group">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">In Progress</span>
+            <FlaskConical size={18} className="text-amber-400" />
+          </div>
+          <div className="text-5xl font-bold text-amber-700 leading-none mb-1">{inProgressProjects.length}</div>
+          <div className="text-xs text-slate-400 mb-4">Active research</div>
+          <div className="border-t border-amber-200 pt-3 space-y-2">
+            {inProgressProjects.length === 0
+              ? <span className="text-xs text-slate-400 italic">No active projects</span>
+              : (() => {
+                  const byType = {}
+                  inProgressProjects.forEach(p => {
+                    const t = p.projectType || 'other'
+                    byType[t] = (byType[t] || 0) + 1
+                  })
+                  const TYPE_LABEL = { systematic_review:'Systematic Review', case_report:'Case Report', case_series:'Case Series', retrospective:'Retrospective', prospective:'Prospective', rct:'RCT', technical_note:'Technical Note', literature_review:'Literature Review', registry:'Registry', other:'Other' }
+                  const total = inProgressProjects.length
+                  return Object.entries(byType).sort((a,b) => b[1]-a[1]).map(([type, n]) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 w-32 truncate shrink-0">{TYPE_LABEL[type] || type}</span>
+                      <div className="flex-1 h-1.5 bg-amber-200 rounded-full overflow-hidden">
+                        <div className="h-full bg-amber-500 rounded-full" style={{ width: `${(n/total)*100}%` }} />
+                      </div>
+                      <span className="text-xs text-amber-700 font-medium w-4 text-right">{n}</span>
+                    </div>
+                  ))
+                })()
+            }
+          </div>
+        </button>
+
+        {/* Active Protocols */}
+        <button onClick={() => setActiveModal('protocols')}
+          className={`${expiringCount > 0 ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-violet-50 border-violet-200 hover:bg-violet-100'} border rounded-2xl p-6 text-left transition-all group`}>
+          <div className="flex items-center justify-between mb-4">
+            <span className={`text-xs font-semibold uppercase tracking-wide ${expiringCount > 0 ? 'text-orange-600' : 'text-violet-600'}`}>Active Protocols</span>
+            <Shield size={18} className={expiringCount > 0 ? 'text-orange-400' : 'text-violet-400'} />
+          </div>
+          <div className={`text-5xl font-bold leading-none mb-1 ${expiringCount > 0 ? 'text-orange-700' : 'text-violet-700'}`}>{activeProtocols.length}</div>
+          <div className="text-xs text-slate-400 mb-4">{expiringCount > 0 ? `⚠ ${expiringCount} expiring within 60 days` : 'IRB approved'}</div>
+          <div className={`border-t pt-3 space-y-2 ${expiringCount > 0 ? 'border-orange-200' : 'border-violet-200'}`}>
+            {activeProtocols.length === 0
+              ? <span className="text-xs text-slate-400 italic">No active protocols</span>
+              : activeProtocols.slice(0, 3).map(p => {
+                  const daysLeft = p.expirationDate ? differenceInDays(new Date(p.expirationDate), today) : null
+                  const warn = daysLeft !== null && daysLeft <= 60
+                  return (
+                    <div key={p.id} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-slate-700 truncate">{p.title}</span>
+                      {p.expirationDate && (
+                        <span className={`text-xs font-medium shrink-0 ${warn ? 'text-red-500' : 'text-slate-400'}`}>
+                          {warn ? `${daysLeft}d left` : format(parseISO(p.expirationDate), 'MMM yyyy')}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })
+            }
+            {activeProtocols.length > 3 && (
+              <p className="text-xs text-slate-400">+{activeProtocols.length - 3} more</p>
+            )}
+          </div>
+        </button>
+
       </div>
 
       {/* New Project modal */}
