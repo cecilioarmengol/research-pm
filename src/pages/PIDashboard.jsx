@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trophy, Clock, FlaskConical, Shield, Calendar, User } from 'lucide-react'
+import { Trophy, Clock, FlaskConical, Shield, Calendar, ChevronDown, ChevronUp } from 'lucide-react'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -72,38 +72,98 @@ function PublishedList({ projects, submissions, getUserById }) {
   )
 }
 
+// ── Submission status config ──────────────────────────────────────────────────
+const SUB_STATUS = {
+  submitted:    { label: 'Submitted',          dot: 'bg-blue-400',    text: 'text-blue-600'    },
+  under_review: { label: 'Under Review',       dot: 'bg-amber-400',   text: 'text-amber-600'   },
+  revision:     { label: 'Revision Requested', dot: 'bg-orange-400',  text: 'text-orange-600'  },
+  accepted:     { label: 'Accepted',           dot: 'bg-emerald-400', text: 'text-emerald-600' },
+  rejected:     { label: 'Rejected',           dot: 'bg-red-400',     text: 'text-red-600'     },
+  withdrawn:    { label: 'Withdrawn',          dot: 'bg-slate-300',   text: 'text-slate-400'   },
+}
+
 // ── Modal content: Under Review ───────────────────────────────────────────────
 function ReviewList({ projects, submissions, getUserById }) {
+  const [expanded, setExpanded] = useState({})
   if (!projects.length) return <EmptyState message="No projects currently under journal review." />
+
   return (
     <div className="space-y-3">
       {projects.map(p => {
         const lead = getUserById(p.assignedTo)
-        const latestSub = submissions
+        const subs = submissions
           .filter(s => s.projectId === p.id)
-          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        const isOpen = expanded[p.id]
+
         return (
-          <div key={p.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-xl">
-            <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <PubBadge status={p.pubStatus} />
-                <span className="text-sm font-semibold text-slate-800">{p.title}</span>
-              </div>
-              {latestSub ? (
-                <p className="text-xs text-slate-500">
-                  {latestSub.journalName}
-                  {latestSub.submissionDate && ` · Submitted ${format(parseISO(latestSub.submissionDate), 'MMM d, yyyy')}`}
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400 italic">No submission logged yet</p>
-              )}
-              {lead && (
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <Avatar user={lead} size="xs" />
-                  <span className="text-xs text-slate-400">{lead.name}</span>
+          <div key={p.id} className="bg-slate-50 rounded-xl overflow-hidden">
+
+            {/* Project header — click to expand */}
+            <button
+              onClick={() => setExpanded(e => ({ ...e, [p.id]: !e[p.id] }))}
+              className="w-full flex items-start gap-3 p-4 text-left hover:bg-slate-100 transition-colors"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <PubBadge status={p.pubStatus} />
+                  <span className="text-sm font-semibold text-slate-800 leading-snug">{p.title}</span>
                 </div>
-              )}
-            </div>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  {lead && (
+                    <div className="flex items-center gap-1.5">
+                      <Avatar user={lead} size="xs" />
+                      <span>{lead.name}</span>
+                    </div>
+                  )}
+                  <span>{subs.length} submission{subs.length !== 1 ? 's' : ''} logged</span>
+                </div>
+              </div>
+              {isOpen ? <ChevronUp size={15} className="text-slate-400 shrink-0 mt-0.5" /> : <ChevronDown size={15} className="text-slate-400 shrink-0 mt-0.5" />}
+            </button>
+
+            {/* Submission log */}
+            {isOpen && (
+              <div className="px-4 pb-4 space-y-3 border-t border-slate-200 pt-3">
+                {subs.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No submissions logged yet.</p>
+                ) : (
+                  subs.map((sub, i) => {
+                    const ss = SUB_STATUS[sub.status] || SUB_STATUS.submitted
+                    return (
+                      <div key={sub.id} className="flex gap-3">
+                        {/* Timeline dot + line */}
+                        <div className="flex flex-col items-center pt-1">
+                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${ss.dot}`} />
+                          {i < subs.length - 1 && <div className="w-px flex-1 bg-slate-200 mt-1" />}
+                        </div>
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 pb-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-slate-700">{sub.journalName}</span>
+                            <span className={`text-xs font-medium ${ss.text}`}>{ss.label}</span>
+                            {i === 0 && <span className="text-xs bg-white border border-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Latest</span>}
+                          </div>
+                          <div className="mt-0.5 text-xs text-slate-400 space-y-0.5">
+                            {sub.submissionDate && (
+                              <p className="flex items-center gap-1">
+                                <Calendar size={10} /> Submitted: {format(parseISO(sub.submissionDate), 'MMM d, yyyy')}
+                              </p>
+                            )}
+                            {sub.decisionDate && (
+                              <p className="flex items-center gap-1">
+                                <Calendar size={10} /> Decision: {format(parseISO(sub.decisionDate), 'MMM d, yyyy')}
+                              </p>
+                            )}
+                            {sub.notes && <p className="italic text-slate-500 mt-1">"{sub.notes}"</p>}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            )}
           </div>
         )
       })}
