@@ -87,88 +87,78 @@ const SUB_STATUS = {
 }
 
 function ReviewList({ projects, submissions, getUserById }) {
-  const [expanded, setExpanded] = useState({})
   if (!projects.length) return <EmptyState message="No projects currently under journal review." />
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {projects.map(p => {
         const lead = getUserById(p.assignedTo)
         const subs = submissions
           .filter(s => s.projectId === p.id)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        const isOpen = expanded[p.id]
 
         return (
-          <div key={p.id} className="bg-slate-50 rounded-xl overflow-hidden">
+          <div key={p.id} className="bg-slate-50 rounded-2xl p-4">
 
-            {/* Header row — click to expand */}
-            <button
-              onClick={() => setExpanded(e => ({ ...e, [p.id]: !e[p.id] }))}
-              className="w-full flex items-start gap-3 p-4 text-left hover:bg-slate-100 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <PubBadge status={p.pubStatus} />
-                  <span className="text-sm font-semibold text-slate-800 leading-snug">{p.title}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-slate-400">
-                  {lead && (
-                    <div className="flex items-center gap-1.5">
-                      <Avatar user={lead} size="xs" />
-                      <span>{lead.name}</span>
-                    </div>
-                  )}
-                  <span>{subs.length} submission{subs.length !== 1 ? 's' : ''} logged</span>
-                </div>
+            {/* Paper title + lead */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <p className="text-sm font-bold text-slate-800 leading-snug">{p.title}</p>
+              <Link to={`/projects/${p.id}`} className="shrink-0 p-1 text-slate-300 hover:text-brand-500 transition-colors">
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
+            {lead && (
+              <div className="flex items-center gap-1.5 mb-4">
+                <Avatar user={lead} size="xs" />
+                <span className="text-xs text-slate-400">{lead.name}</span>
               </div>
-              <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                <Link to={`/projects/${p.id}`} onClick={e => e.stopPropagation()}
-                  className="p-1 text-slate-300 hover:text-brand-500 transition-colors" title="Open project">
-                  <ArrowUpRight size={14} />
-                </Link>
-                {isOpen ? <ChevronUp size={15} className="text-slate-400" /> : <ChevronDown size={15} className="text-slate-400" />}
-              </div>
-            </button>
+            )}
 
-            {/* Submission log */}
-            {isOpen && (
-              <div className="px-4 pb-4 space-y-3 border-t border-slate-200 pt-3">
-                {subs.length === 0 ? (
-                  <p className="text-xs text-slate-400 italic">No submissions logged yet.</p>
-                ) : (
-                  subs.map((sub, i) => {
-                    const ss = SUB_STATUS[sub.status] || SUB_STATUS.submitted
-                    return (
-                      <div key={sub.id} className="flex gap-3">
-                        <div className="flex flex-col items-center pt-1">
-                          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${ss.dot}`} />
-                          {i < subs.length - 1 && <div className="w-px flex-1 bg-slate-200 mt-1" />}
-                        </div>
-                        <div className="flex-1 min-w-0 pb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-slate-700">{sub.journalName}</span>
-                            <span className={`text-xs font-medium ${ss.text}`}>{ss.label}</span>
-                            {i === 0 && <span className="text-xs bg-white border border-slate-200 text-slate-400 px-1.5 py-0.5 rounded-full">Latest</span>}
-                          </div>
-                          <div className="mt-0.5 text-xs text-slate-400 space-y-0.5">
-                            {sub.submissionDate && (
-                              <p className="flex items-center gap-1">
-                                <Calendar size={10} /> Submitted: {format(parseISO(sub.submissionDate), 'MMM d, yyyy')}
-                              </p>
-                            )}
-                            {sub.decisionDate && (
-                              <p className="flex items-center gap-1">
-                                <Calendar size={10} /> Decision: {format(parseISO(sub.decisionDate), 'MMM d, yyyy')}
-                              </p>
-                            )}
-                            {sub.notes && <p className="italic text-slate-500 mt-1">"{sub.notes}"</p>}
-                          </div>
-                        </div>
+            {/* Timeline — always visible */}
+            {subs.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No submissions logged yet.</p>
+            ) : (
+              <div className="space-y-0">
+                {subs.map((sub, i) => {
+                  const ss = SUB_STATUS[sub.status] || SUB_STATUS.submitted
+                  const isLast = i === subs.length - 1
+                  return (
+                    <div key={sub.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-3 h-3 rounded-full shrink-0 border-2 border-white shadow ${ss.dot}`} />
+                        {!isLast && <div className="w-0.5 flex-1 bg-slate-200 my-0.5" style={{ minHeight: '20px' }} />}
                       </div>
-                    )
-                  })
-                )}
+                      <div className={`flex-1 min-w-0 ${!isLast ? 'pb-3' : ''}`}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-slate-700">{sub.journalName}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full bg-white border ${ss.text}`}>
+                            {ss.label}
+                          </span>
+                          {i === 0 && (
+                            <span className="text-xs bg-brand-50 text-brand-500 font-medium px-2 py-0.5 rounded-full">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-x-4 mt-0.5 text-xs text-slate-400">
+                          {sub.submissionDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar size={10} /> Submitted {format(parseISO(sub.submissionDate), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                          {sub.decisionDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar size={10} /> Decision {format(parseISO(sub.decisionDate), 'MMM d, yyyy')}
+                            </span>
+                          )}
+                        </div>
+                        {sub.notes && (
+                          <p className="text-xs text-slate-400 italic mt-0.5">"{sub.notes}"</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
