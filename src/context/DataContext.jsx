@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal, mapCongress } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -21,6 +21,7 @@ function loadDemoState() {
     protocols:   [],
     submissions: [],
     journals:    [],
+    congresses:  [],
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -106,6 +107,12 @@ function demoReducer(state, action) {
       return { ...state, journals: (state.journals || []).filter(j => j.id !== action.payload.id) }
     case 'TOGGLE_JOURNAL_FAVORITE':
       return { ...state, journals: (state.journals || []).map(j => j.id === action.payload.id ? { ...j, isFavorite: !j.isFavorite } : j) }
+    case 'ADD_CONGRESS':
+      return { ...state, congresses: [...(state.congresses || []), { id: uid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...action.payload }] }
+    case 'UPDATE_CONGRESS':
+      return { ...state, congresses: (state.congresses || []).map(c => c.id === action.payload.id ? { ...c, ...action.payload, updatedAt: new Date().toISOString() } : c) }
+    case 'DELETE_CONGRESS':
+      return { ...state, congresses: (state.congresses || []).filter(c => c.id !== action.payload.id) }
     case 'ADD_USER':
       return { ...state, users: [...state.users, { id: uid(), ...action.payload }] }
     case 'UPDATE_USER':
@@ -125,6 +132,7 @@ function useSupabaseData(user) {
   const [protocols,   setProtocols]   = useState([])
   const [submissions, setSubmissions] = useState([])
   const [journals,    setJournals]    = useState([])
+  const [congresses,  setCongresses]  = useState([])
   const [users,        setUsers]        = useState([])
   const [loading,      setLoading]      = useState(true)
 
@@ -140,8 +148,9 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' },      () => loadComments())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },          () => loadProtocols())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_submissions' },() => loadSubmissions())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' },           () => loadJournals())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },           () => loadUsers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' },            () => loadJournals())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'congresses' },          () => loadCongresses())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },            () => loadUsers())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -149,7 +158,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadCongresses(), loadUsers()])
     setLoading(false)
   }
 
@@ -180,6 +189,10 @@ function useSupabaseData(user) {
   async function loadJournals() {
     const { data } = await supabase.from('journals').select('*').order('impact_factor', { ascending: false, nullsFirst: false })
     if (data) setJournals(data.map(mapJournal))
+  }
+  async function loadCongresses() {
+    const { data } = await supabase.from('congresses').select('*').order('start_date', { ascending: true, nullsFirst: false })
+    if (data) setCongresses(data.map(mapCongress))
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -457,6 +470,45 @@ function useSupabaseData(user) {
         break
       }
 
+      case 'ADD_CONGRESS':
+        await supabase.from('congresses').insert({
+          name:              action.payload.name,
+          location:          action.payload.location          || null,
+          country:           action.payload.country           || null,
+          start_date:        action.payload.startDate         || null,
+          end_date:          action.payload.endDate           || null,
+          abstract_deadline: action.payload.abstractDeadline  || null,
+          website_url:       action.payload.websiteUrl        || null,
+          specialty_tags:    action.payload.specialtyTags     || [],
+          notes:             action.payload.notes             || null,
+          created_by:        user.id,
+        })
+        await loadCongresses()
+        break
+
+      case 'UPDATE_CONGRESS': {
+        const { id: cId, ...cp } = action.payload
+        await supabase.from('congresses').update({
+          name:              cp.name,
+          location:          cp.location          || null,
+          country:           cp.country           || null,
+          start_date:        cp.startDate         || null,
+          end_date:          cp.endDate           || null,
+          abstract_deadline: cp.abstractDeadline  || null,
+          website_url:       cp.websiteUrl        || null,
+          specialty_tags:    cp.specialtyTags     || [],
+          notes:             cp.notes             || null,
+          updated_at:        new Date().toISOString(),
+        }).eq('id', cId)
+        await loadCongresses()
+        break
+      }
+
+      case 'DELETE_CONGRESS':
+        await supabase.from('congresses').delete().eq('id', action.payload.id)
+        await loadCongresses()
+        break
+
       case 'UPDATE_USER':
         await supabase.from('profiles').update({
           full_name: action.payload.name,
@@ -475,7 +527,7 @@ function useSupabaseData(user) {
     }
   }
 
-  return { projects, stages, tasks, comments, protocols, submissions, journals, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, submissions, journals, congresses, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

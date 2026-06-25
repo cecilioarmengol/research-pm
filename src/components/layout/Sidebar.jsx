@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, BookUser, ClipboardList,
-  Brain, LogOut, BookOpen, Library, LayoutGrid,
+  Brain, LogOut, BookOpen, Library, LayoutGrid, Globe,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
@@ -12,12 +12,14 @@ const navItems = [
   { to: '/protocols',    label: 'Protocols',    icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
   { to: '/publications', label: 'Publications', icon: BookOpen, roles: ['admin', 'research_fellow'] },
   { to: '/journals',     label: 'Journals',     icon: Library },
+  { to: '/congresses',   label: 'Congresses',   icon: Globe   },
 ]
 
 const piNavItems = [
-  { to: '/pi-dashboard', label: 'Overview',  icon: LayoutGrid },
-  { to: '/team',         label: 'Directory', icon: BookUser   },
-  { to: '/journals',     label: 'Journals',  icon: Library    },
+  { to: '/pi-dashboard', label: 'Overview',    icon: LayoutGrid },
+  { to: '/team',         label: 'Directory',   icon: BookUser   },
+  { to: '/journals',     label: 'Journals',    icon: Library    },
+  { to: '/congresses',   label: 'Congresses',  icon: Globe      },
 ]
 
 const adminItems = [

@@ -112,6 +112,22 @@ export const mapJournal = j => ({
   updatedAt:       j.updated_at,
 })
 
+export const mapCongress = c => ({
+  id:               c.id,
+  name:             c.name,
+  location:         c.location         || '',
+  country:          c.country          || '',
+  startDate:        c.start_date       || null,
+  endDate:          c.end_date         || null,
+  abstractDeadline: c.abstract_deadline || null,
+  websiteUrl:       c.website_url      || '',
+  specialtyTags:    c.specialty_tags   || [],
+  notes:            c.notes            || '',
+  createdBy:        c.created_by,
+  createdAt:        c.created_at,
+  updatedAt:        c.updated_at,
+})
+
 export const mapSubmission = s => ({
   id:             s.id,
   projectId:      s.project_id,

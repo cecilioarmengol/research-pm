@@ -11,6 +11,7 @@ import Team from './pages/Team'
 import Protocols from './pages/Protocols'
 import Publications from './pages/Publications'
 import Journals from './pages/Journals'
+import Congresses from './pages/Congresses'
 import PIDashboard from './pages/PIDashboard'
 
 function ProtectedRoute({ children, requireRole }) {
@@ -41,6 +42,7 @@ function AppRoutes() {
       <Route path="/protocols" element={<ProtectedRoute><Protocols /></ProtectedRoute>} />
       <Route path="/publications" element={<ProtectedRoute><Publications /></ProtectedRoute>} />
       <Route path="/journals" element={<ProtectedRoute><Journals /></ProtectedRoute>} />
+      <Route path="/congresses" element={<ProtectedRoute><Congresses /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
