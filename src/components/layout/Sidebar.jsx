@@ -15,9 +15,9 @@ const navItems = [
 ]
 
 const piNavItems = [
-  { to: '/pi-dashboard', label: 'Overview',      icon: LayoutGrid },
-  { to: '/publications', label: 'Publications',  icon: BookOpen   },
-  { to: '/journals',     label: 'Journals',      icon: Library    },
+  { to: '/pi-dashboard', label: 'Overview',  icon: LayoutGrid },
+  { to: '/directory',    label: 'Directory', icon: Users      },
+  { to: '/journals',     label: 'Journals',  icon: Library    },
 ]
 
 const adminItems = [
