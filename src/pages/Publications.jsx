@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { BookOpen, Send, ChevronDown, ChevronUp, Edit2, X, Save, Calendar, Trash2 } from 'lucide-react'
+import { BookOpen, Send, ChevronDown, ChevronUp, Edit2, X, Save, Calendar, Trash2, Paperclip, FileText } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
+import { supabase, DEMO_MODE } from '../lib/supabase'
 import Layout from '../components/layout/Layout'
 import Header from '../components/layout/Header'
 import Button from '../components/ui/Button'
@@ -110,6 +111,22 @@ export default function Publications() {
   const [expanded,            setExpanded]            = useState({})
 
   const canManage = ['admin', 'pi', 'research_fellow'].includes(user?.role)
+
+  async function handlePdfUpload(proj, file) {
+    if (!file || DEMO_MODE) return
+    const ext  = file.name.split('.').pop()
+    const path = `${proj.id}/${crypto.randomUUID()}.${ext}`
+    const { error } = await supabase.storage.from('papers').upload(path, file, { upsert: true })
+    if (error) { alert('Upload failed: ' + error.message); return }
+    dispatch({ type: 'UPDATE_PROJECT', payload: { ...proj, fileUrl: path, fileName: file.name, tags: proj.tags, teamMembers: proj.teamMembers } })
+  }
+
+  async function handlePdfView(proj) {
+    if (!proj.fileUrl) return
+    const { data, error } = await supabase.storage.from('papers').createSignedUrl(proj.fileUrl, 120)
+    if (error || !data?.signedUrl) { alert('Could not open PDF. Please try again.'); return }
+    window.open(data.signedUrl, '_blank')
+  }
 
   // Publications = completed projects
   const completed = projects.filter(p => p.status === 'completed')
@@ -302,6 +319,32 @@ export default function Publications() {
                           }}>
                           Log Submission
                         </Button>
+                        {/* PDF attach / view */}
+                        {proj.fileUrl ? (
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="xs" icon={FileText}
+                              className="text-emerald-600 hover:text-emerald-700"
+                              onClick={() => handlePdfView(proj)}
+                              title="View PDF">
+                              View PDF
+                            </Button>
+                            <label className="cursor-pointer" title="Replace PDF">
+                              <input type="file" accept=".pdf" className="hidden"
+                                onChange={e => e.target.files[0] && handlePdfUpload(proj, e.target.files[0])} />
+                              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-100 transition-colors">
+                                <Paperclip size={11} />
+                              </span>
+                            </label>
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer" title="Attach PDF">
+                            <input type="file" accept=".pdf" className="hidden"
+                              onChange={e => e.target.files[0] && handlePdfUpload(proj, e.target.files[0])} />
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-slate-400 hover:bg-slate-100 transition-colors border border-dashed border-slate-200">
+                              <Paperclip size={11} /> Attach PDF
+                            </span>
+                          </label>
+                        )}
                         {user?.role === 'admin' && (
                           <Button variant="ghost" size="xs" icon={Trash2}
                             className="hover:text-red-500 text-slate-300"

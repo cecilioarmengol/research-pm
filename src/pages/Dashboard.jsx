@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
@@ -38,6 +39,13 @@ function EmptyState({ message }) {
 }
 
 // ── Modal lists ───────────────────────────────────────────────────────────────
+async function openPdf(proj) {
+  if (!proj.fileUrl || !supabase) return
+  const { data, error } = await supabase.storage.from('papers').createSignedUrl(proj.fileUrl, 120)
+  if (error || !data?.signedUrl) { alert('Could not open PDF.'); return }
+  window.open(data.signedUrl, '_blank')
+}
+
 function PublishedList({ projects, submissions, getUserById }) {
   if (!projects.length) return <EmptyState message="No accepted or published projects yet." />
   return (
@@ -65,6 +73,12 @@ function PublishedList({ projects, submissions, getUserById }) {
                   <Avatar user={lead} size="xs" />
                   <span className="text-xs text-slate-400">{lead.name}</span>
                 </div>
+              )}
+              {p.fileUrl && (
+                <button onClick={() => openPdf(p)}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+                  <FileText size={13} /> View PDF
+                </button>
               )}
             </div>
             <Link to={`/projects/${p.id}`} className="shrink-0 p-1 text-slate-300 hover:text-brand-500 transition-colors" title="Open project">
