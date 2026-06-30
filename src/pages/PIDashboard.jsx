@@ -333,7 +333,7 @@ function PublicationsChart({ projects }) {
   function changeYear(delta) { setYear(y => y + delta); setSelectedMonth(null) }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-6">
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-sm font-semibold text-slate-700">Journal Acceptances by Month</h2>
@@ -487,16 +487,16 @@ export default function PIDashboard() {
       </div>
 
       {/* 2×2 card grid */}
-      <div className="p-6 grid grid-cols-2 gap-4 max-w-4xl">
+      <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl">
 
         {/* Accepted / Published */}
         <button onClick={() => setActiveModal('published')}
-          className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl p-6 text-left transition-all">
+          className="bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-2xl p-4 sm:p-6 text-left transition-all">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-emerald-600">Accepted / Published</span>
             <Trophy size={18} className="text-emerald-400" />
           </div>
-          <div className="text-5xl font-bold text-emerald-700 leading-none mb-1">{publishedProjects.length}</div>
+          <div className="text-4xl sm:text-5xl font-bold text-emerald-700 leading-none mb-1">{publishedProjects.length}</div>
           <div className="text-xs text-slate-400 mb-4">
             Research outputs
             {(() => {
@@ -516,12 +516,12 @@ export default function PIDashboard() {
 
         {/* Under Review */}
         <button onClick={() => setActiveModal('review')}
-          className="bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-2xl p-6 text-left transition-all">
+          className="bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 rounded-2xl p-4 sm:p-6 text-left transition-all">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Under Review</span>
             <Clock size={18} className="text-indigo-400" />
           </div>
-          <div className="text-5xl font-bold text-indigo-700 leading-none mb-1">{underReviewProjects.length}</div>
+          <div className="text-4xl sm:text-5xl font-bold text-indigo-700 leading-none mb-1">{underReviewProjects.length}</div>
           <div className="text-xs text-slate-400 mb-4">In journal pipeline</div>
           <div className="border-t border-indigo-200 pt-3 flex flex-wrap gap-2">
             {[['revision','Revision','bg-orange-100 text-orange-700'],['under_review','Under Review','bg-amber-100 text-amber-700'],['submitted','Submitted','bg-indigo-100 text-indigo-700']].map(([status, label, cls]) => {
@@ -534,12 +534,12 @@ export default function PIDashboard() {
 
         {/* In Progress */}
         <button onClick={() => setActiveModal('progress')}
-          className="bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-2xl p-6 text-left transition-all">
+          className="bg-amber-50 border border-amber-200 hover:bg-amber-100 rounded-2xl p-4 sm:p-6 text-left transition-all">
           <div className="flex items-center justify-between mb-4">
             <span className="text-xs font-semibold uppercase tracking-wide text-amber-600">In Progress</span>
             <FlaskConical size={18} className="text-amber-400" />
           </div>
-          <div className="text-5xl font-bold text-amber-700 leading-none mb-1">{inProgressProjects.length}</div>
+          <div className="text-4xl sm:text-5xl font-bold text-amber-700 leading-none mb-1">{inProgressProjects.length}</div>
           <div className="text-xs text-slate-400 mb-4">Active research</div>
           <div className="border-t border-amber-200 pt-3 space-y-2">
             {inProgressProjects.length === 0
@@ -565,12 +565,12 @@ export default function PIDashboard() {
 
         {/* Active Protocols */}
         <button onClick={() => setActiveModal('protocols')}
-          className={`${expiringCount > 0 ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-violet-50 border-violet-200 hover:bg-violet-100'} border rounded-2xl p-6 text-left transition-all`}>
+          className={`${expiringCount > 0 ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-violet-50 border-violet-200 hover:bg-violet-100'} border rounded-2xl p-4 sm:p-6 text-left transition-all`}>
           <div className="flex items-center justify-between mb-4">
             <span className={`text-xs font-semibold uppercase tracking-wide ${expiringCount > 0 ? 'text-orange-600' : 'text-violet-600'}`}>Active Protocols</span>
             <Shield size={18} className={expiringCount > 0 ? 'text-orange-400' : 'text-violet-400'} />
           </div>
-          <div className={`text-5xl font-bold leading-none mb-1 ${expiringCount > 0 ? 'text-orange-700' : 'text-violet-700'}`}>{activeProtocols.length}</div>
+          <div className={`text-4xl sm:text-5xl font-bold leading-none mb-1 ${expiringCount > 0 ? 'text-orange-700' : 'text-violet-700'}`}>{activeProtocols.length}</div>
           <div className="text-xs text-slate-400 mb-4">{expiringCount > 0 ? `⚠ ${expiringCount} expiring within 60 days` : 'IRB approved'}</div>
           <div className={`border-t pt-3 space-y-2 ${expiringCount > 0 ? 'border-orange-200' : 'border-violet-200'}`}>
             {activeProtocols.length === 0
@@ -597,7 +597,7 @@ export default function PIDashboard() {
       </div>
 
       {/* Publications chart */}
-      <div className="px-6 pb-6 max-w-4xl">
+      <div className="px-4 sm:px-6 pb-4 sm:pb-6 max-w-4xl">
         <PublicationsChart projects={publishedProjects} />
       </div>
 
