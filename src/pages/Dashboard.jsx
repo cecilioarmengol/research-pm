@@ -510,7 +510,14 @@ export default function Dashboard() {
             <Trophy size={18} className="text-emerald-400" />
           </div>
           <div className="text-5xl font-bold text-emerald-700 leading-none mb-1">{publishedProjects.length}</div>
-          <div className="text-xs text-slate-400 mb-4">Research outputs</div>
+          <div className="text-xs text-slate-400 mb-4">
+            Research outputs
+            {(() => {
+              const dates = publishedProjects.map(p => p.publicationDate || p.updatedAt).filter(Boolean).sort()
+              if (!dates.length) return null
+              return <span className="ml-1">· since {format(parseISO(dates[0]), 'MMM yyyy')}</span>
+            })()}
+          </div>
           <div className="border-t border-emerald-200 pt-3 flex flex-wrap gap-2">
             {[['published','Published','bg-green-100 text-green-700'],['accepted','Accepted','bg-emerald-100 text-emerald-700']].map(([status, label, cls]) => {
               const n = publishedProjects.filter(p => p.pubStatus === status).length
