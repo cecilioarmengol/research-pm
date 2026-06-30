@@ -340,14 +340,6 @@ function PublicationsChart({ projects }) {
           <p className="text-xs text-slate-400 mt-0.5">{totalYear} paper{totalYear !== 1 ? 's' : ''} accepted in {year}</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-3 mr-4">
-            <span className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-3 h-3 rounded-sm bg-green-400 inline-block" /> Published
-            </span>
-            <span className="flex items-center gap-1.5 text-xs text-slate-500">
-              <span className="w-3 h-3 rounded-sm bg-emerald-300 inline-block" /> Accepted
-            </span>
-          </div>
           <button onClick={() => changeYear(-1)}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
             <ChevronLeft size={16} />
@@ -375,8 +367,7 @@ function PublicationsChart({ projects }) {
                   <button onClick={() => toggleMonth(i)}
                     className={`w-full rounded-t-md overflow-hidden flex flex-col justify-end transition-all ${isSelected ? 'ring-2 ring-brand-400 ring-offset-1' : 'hover:opacity-80'}`}
                     style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}>
-                    <div className="w-full bg-emerald-300" style={{ height: `${m.accepted / m.total * 100}%` }} />
-                    <div className="w-full bg-green-400"   style={{ height: `${m.published / m.total * 100}%` }} />
+                    <div className="w-full bg-emerald-400" style={{ height: '100%' }} />
                   </button>
                 ) : (
                   <div className="w-full rounded-t-md bg-slate-100" style={{ height: '6px' }} />
@@ -396,10 +387,9 @@ function PublicationsChart({ projects }) {
           <div className="space-y-2">
             {selected.papers.map(p => (
               <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <span className={`w-2 h-2 rounded-full shrink-0 ${p.pubStatus === 'published' ? 'bg-green-400' : 'bg-emerald-300'}`} />
+                <span className="w-2 h-2 rounded-full shrink-0 bg-emerald-400" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-700 leading-snug truncate">{p.title}</p>
-                  <p className="text-xs text-slate-400 capitalize mt-0.5">{p.pubStatus}</p>
                 </div>
                 {p.fileUrl && (
                   <button onClick={() => openPdf(p)}
