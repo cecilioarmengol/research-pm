@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { useData } from '../context/DataContext'
@@ -274,6 +274,90 @@ function ProtocolList({ protocols, getUserById }) {
   )
 }
 
+// ── Publications chart ────────────────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function PublicationsChart({ projects }) {
+  const [year, setYear] = useState(new Date().getFullYear())
+
+  const allYears = [...new Set(
+    projects
+      .filter(p => p.updatedAt)
+      .map(p => new Date(p.updatedAt).getFullYear())
+  )].sort((a, b) => b - a)
+
+  if (allYears.length > 0 && !allYears.includes(year)) {
+    allYears.push(year)
+    allYears.sort((a, b) => b - a)
+  }
+
+  const byMonth = MONTHS.map((_, i) => {
+    const month = projects.filter(p => {
+      if (!p.updatedAt) return false
+      const d = new Date(p.updatedAt)
+      return d.getFullYear() === year && d.getMonth() === i
+    })
+    return {
+      published: month.filter(p => p.pubStatus === 'published').length,
+      accepted:  month.filter(p => p.pubStatus === 'accepted').length,
+      total:     month.length,
+    }
+  })
+
+  const maxVal = Math.max(...byMonth.map(m => m.total), 1)
+  const totalYear = byMonth.reduce((s, m) => s + m.total, 0)
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-4xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">Publications by Month</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{totalYear} paper{totalYear !== 1 ? 's' : ''} in {year}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 mr-4">
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="w-3 h-3 rounded-sm bg-green-400 inline-block" /> Published
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-slate-500">
+              <span className="w-3 h-3 rounded-sm bg-emerald-300 inline-block" /> Accepted
+            </span>
+          </div>
+          <button onClick={() => setYear(y => y - 1)}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="text-sm font-semibold text-slate-700 w-10 text-center">{year}</span>
+          <button onClick={() => setYear(y => y + 1)} disabled={year >= new Date().getFullYear()}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div className="flex items-end gap-2 h-36">
+        {byMonth.map((m, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <div className="w-full flex flex-col justify-end" style={{ height: '112px' }}>
+              {m.total > 0 ? (
+                <div className="w-full rounded-t-md overflow-hidden flex flex-col justify-end"
+                  style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}>
+                  <div className="w-full bg-emerald-300" style={{ height: `${m.accepted / m.total * 100}%` }} />
+                  <div className="w-full bg-green-400"   style={{ height: `${m.published / m.total * 100}%` }} />
+                </div>
+              ) : (
+                <div className="w-full rounded-t-md bg-slate-100" style={{ height: '6px' }} />
+              )}
+            </div>
+            <span className="text-xs text-slate-400">{MONTHS[i]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { projects, submissions, protocols, getProjectProgress, getStagesForProject, getUserById } = useData()
@@ -470,6 +554,11 @@ export default function Dashboard() {
           </div>
         </button>
 
+      </div>
+
+      {/* Publications chart */}
+      <div className="px-6 pb-6 max-w-4xl">
+        <PublicationsChart projects={visibleProjects.filter(p => p.pubStatus === 'accepted' || p.pubStatus === 'published')} />
       </div>
 
       {/* New Project modal */}
