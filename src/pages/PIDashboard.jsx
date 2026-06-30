@@ -316,13 +316,19 @@ function PublicationsChart({ projects }) {
           </button>
         </div>
       </div>
-      <div className="flex items-end gap-2 h-36">
+      <div className="flex items-end gap-2" style={{ height: '152px' }}>
         {byMonth.map((m, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+          <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
+            <div style={{ height: '20px' }} className="flex items-end justify-center">
+              {m.total > 0 && (
+                <span className="text-xs font-semibold text-slate-600">{m.total}</span>
+              )}
+            </div>
             <div className="w-full flex flex-col justify-end" style={{ height: '112px' }}>
               {m.total > 0 ? (
-                <div className="w-full rounded-t-md overflow-hidden flex flex-col justify-end"
-                  style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}>
+                <div className="relative w-full rounded-t-md overflow-hidden flex flex-col justify-end cursor-default"
+                  style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}
+                  title={`${MONTHS[i]}: ${m.published} published, ${m.accepted} accepted`}>
                   <div className="w-full bg-emerald-300" style={{ height: `${m.accepted / m.total * 100}%` }} />
                   <div className="w-full bg-green-400"   style={{ height: `${m.published / m.total * 100}%` }} />
                 </div>
