@@ -48,6 +48,16 @@ async function openPdf(proj) {
 
 function PublishedList({ projects, submissions, getUserById, dispatch }) {
   if (!projects.length) return <EmptyState message="No accepted or published projects yet." />
+
+  async function handleUpload(proj, file) {
+    if (!file || !supabase) return
+    const ext  = file.name.split('.').pop()
+    const path = `${proj.id}/${crypto.randomUUID()}.${ext}`
+    const { error } = await supabase.storage.from('papers').upload(path, file, { upsert: true })
+    if (error) { alert('Upload failed: ' + error.message); return }
+    dispatch({ type: 'UPDATE_PROJECT', payload: { ...proj, fileUrl: path, fileName: file.name } })
+  }
+
   return (
     <div className="space-y-3">
       {projects.map(p => {
@@ -85,16 +95,29 @@ function PublishedList({ projects, submissions, getUserById, dispatch }) {
                   onChange={e => dispatch({ type: 'UPDATE_PROJECT', payload: { ...p, publicationDate: e.target.value || null } })}
                 />
               </div>
-              {p.fileUrl && (
-                <button onClick={() => openPdf(p)}
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
-                  <FileText size={13} /> View PDF
-                </button>
-              )}
+              {/* PDF actions */}
+              <div className="flex items-center gap-3 mt-2">
+                {p.fileUrl ? (
+                  <>
+                    <button onClick={() => openPdf(p)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+                      <FileText size={13} /> View PDF
+                    </button>
+                    <label className="cursor-pointer inline-flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                      <input type="file" accept=".pdf" className="hidden"
+                        onChange={e => e.target.files[0] && handleUpload(p, e.target.files[0])} />
+                      Replace
+                    </label>
+                  </>
+                ) : (
+                  <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-brand-600 transition-colors border border-dashed border-slate-300 hover:border-brand-400 rounded-lg px-2 py-1">
+                    <input type="file" accept=".pdf" className="hidden"
+                      onChange={e => e.target.files[0] && handleUpload(p, e.target.files[0])} />
+                    <FileText size={13} /> Attach PDF
+                  </label>
+                )}
+              </div>
             </div>
-            <Link to={`/projects/${p.id}`} className="shrink-0 p-1 text-slate-300 hover:text-brand-500 transition-colors" title="Open project">
-              <ArrowUpRight size={14} />
-            </Link>
           </div>
         )
       })}
