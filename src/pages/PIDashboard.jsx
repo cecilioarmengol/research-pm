@@ -44,7 +44,7 @@ async function openPdf(proj) {
 }
 
 // ── Modal content: Accepted / Published ───────────────────────────────────────
-function PublishedList({ projects, submissions, getUserById }) {
+function PublishedList({ projects, submissions, getUserById, dispatch }) {
   if (!projects.length) return <EmptyState message="No accepted or published projects yet." />
   return (
     <div className="space-y-3">
@@ -72,6 +72,16 @@ function PublishedList({ projects, submissions, getUserById }) {
                   <span className="text-xs text-slate-400">{lead.name}</span>
                 </div>
               )}
+              <div className="flex items-center gap-1.5 mt-2">
+                <Calendar size={11} className="text-slate-400 shrink-0" />
+                <span className="text-xs text-slate-400">Published:</span>
+                <input
+                  type="date"
+                  className="text-xs text-slate-600 bg-transparent border-b border-dashed border-slate-300 hover:border-brand-400 focus:border-brand-500 focus:outline-none cursor-pointer"
+                  value={p.publicationDate || ''}
+                  onChange={e => dispatch({ type: 'UPDATE_PROJECT', payload: { ...p, publicationDate: e.target.value || null } })}
+                />
+              </div>
               {p.fileUrl && (
                 <button onClick={() => openPdf(p)}
                   className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
@@ -275,8 +285,9 @@ function PublicationsChart({ projects }) {
 
   const byMonth = MONTHS.map((_, i) => {
     const month = projects.filter(p => {
-      if (!p.updatedAt) return false
-      const d = new Date(p.updatedAt)
+      const dateStr = p.publicationDate || p.updatedAt
+      if (!dateStr) return false
+      const d = new Date(dateStr)
       return d.getFullYear() === year && d.getMonth() === i
     })
     return {
@@ -346,7 +357,7 @@ function PublicationsChart({ projects }) {
 
 // ── Main dashboard ─────────────────────────────────────────────────────────────
 export default function PIDashboard() {
-  const { projects, submissions, protocols, getProjectProgress, getStagesForProject, getUserById } = useData()
+  const { projects, submissions, protocols, getProjectProgress, getStagesForProject, getUserById, dispatch } = useData()
   const { user } = useAuth()
   const [activeModal, setActiveModal] = useState(null)
 
@@ -539,7 +550,7 @@ export default function PIDashboard() {
         title="Accepted / Published"
         size="md"
       >
-        <PublishedList projects={publishedProjects} submissions={submissions} getUserById={getUserById} />
+        <PublishedList projects={publishedProjects} submissions={submissions} getUserById={getUserById} dispatch={dispatch} />
       </Modal>
 
       <Modal
