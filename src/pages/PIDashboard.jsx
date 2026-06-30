@@ -84,7 +84,7 @@ function PublishedList({ projects, submissions, getUserById, dispatch }) {
               )}
               <div className="flex items-center gap-1.5 mt-2">
                 <Calendar size={11} className="text-slate-400 shrink-0" />
-                <span className="text-xs text-slate-400">Published:</span>
+                <span className="text-xs text-slate-400">Acceptance date:</span>
                 <input
                   type="date"
                   className="text-xs text-slate-600 bg-transparent border-b border-dashed border-slate-300 hover:border-brand-400 focus:border-brand-500 focus:outline-none cursor-pointer"
@@ -336,8 +336,8 @@ function PublicationsChart({ projects }) {
     <div className="bg-white border border-slate-200 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-sm font-semibold text-slate-700">Publications by Month</h2>
-          <p className="text-xs text-slate-400 mt-0.5">{totalYear} paper{totalYear !== 1 ? 's' : ''} in {year}</p>
+          <h2 className="text-sm font-semibold text-slate-700">Journal Acceptances by Month</h2>
+          <p className="text-xs text-slate-400 mt-0.5">{totalYear} paper{totalYear !== 1 ? 's' : ''} accepted in {year}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-3 mr-4">
