@@ -279,26 +279,33 @@ function ProtocolList({ protocols, getUserById }) {
 
 // ── Publications chart ────────────────────────────────────────────────────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 function PublicationsChart({ projects }) {
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [year,          setYear]          = useState(new Date().getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(null)
 
   const byMonth = MONTHS.map((_, i) => {
-    const month = projects.filter(p => {
+    const papers = projects.filter(p => {
       const dateStr = p.publicationDate || p.updatedAt
       if (!dateStr) return false
       const d = new Date(dateStr)
       return d.getFullYear() === year && d.getMonth() === i
     })
     return {
-      published: month.filter(p => p.pubStatus === 'published').length,
-      accepted:  month.filter(p => p.pubStatus === 'accepted').length,
-      total:     month.length,
+      papers,
+      published: papers.filter(p => p.pubStatus === 'published').length,
+      accepted:  papers.filter(p => p.pubStatus === 'accepted').length,
+      total:     papers.length,
     }
   })
 
-  const maxVal = Math.max(...byMonth.map(m => m.total), 1)
+  const maxVal    = Math.max(...byMonth.map(m => m.total), 1)
   const totalYear = byMonth.reduce((s, m) => s + m.total, 0)
+  const selected  = selectedMonth !== null ? byMonth[selectedMonth] : null
+
+  function toggleMonth(i) { setSelectedMonth(prev => prev === i ? null : i) }
+  function changeYear(delta) { setYear(y => y + delta); setSelectedMonth(null) }
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6">
@@ -316,41 +323,64 @@ function PublicationsChart({ projects }) {
               <span className="w-3 h-3 rounded-sm bg-emerald-300 inline-block" /> Accepted
             </span>
           </div>
-          <button onClick={() => setYear(y => y - 1)}
+          <button onClick={() => changeYear(-1)}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-semibold text-slate-700 w-10 text-center">{year}</span>
-          <button onClick={() => setYear(y => y + 1)} disabled={year >= new Date().getFullYear()}
+          <button onClick={() => changeYear(1)} disabled={year >= new Date().getFullYear()}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-30">
             <ChevronRight size={16} />
           </button>
         </div>
       </div>
+
       <div className="flex items-end gap-2" style={{ height: '152px' }}>
-        {byMonth.map((m, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1 group relative">
-            <div style={{ height: '20px' }} className="flex items-end justify-center">
-              {m.total > 0 && (
-                <span className="text-xs font-semibold text-slate-600">{m.total}</span>
-              )}
+        {byMonth.map((m, i) => {
+          const isSelected = selectedMonth === i
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div style={{ height: '20px' }} className="flex items-end justify-center">
+                {m.total > 0 && (
+                  <span className={`text-xs font-semibold ${isSelected ? 'text-brand-600' : 'text-slate-600'}`}>{m.total}</span>
+                )}
+              </div>
+              <div className="w-full flex flex-col justify-end" style={{ height: '112px' }}>
+                {m.total > 0 ? (
+                  <button onClick={() => toggleMonth(i)}
+                    className={`w-full rounded-t-md overflow-hidden flex flex-col justify-end transition-all ${isSelected ? 'ring-2 ring-brand-400 ring-offset-1' : 'hover:opacity-80'}`}
+                    style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}>
+                    <div className="w-full bg-emerald-300" style={{ height: `${m.accepted / m.total * 100}%` }} />
+                    <div className="w-full bg-green-400"   style={{ height: `${m.published / m.total * 100}%` }} />
+                  </button>
+                ) : (
+                  <div className="w-full rounded-t-md bg-slate-100" style={{ height: '6px' }} />
+                )}
+              </div>
+              <span className={`text-xs ${isSelected ? 'text-brand-600 font-semibold' : 'text-slate-400'}`}>{MONTHS[i]}</span>
             </div>
-            <div className="w-full flex flex-col justify-end" style={{ height: '112px' }}>
-              {m.total > 0 ? (
-                <div className="relative w-full rounded-t-md overflow-hidden flex flex-col justify-end cursor-default"
-                  style={{ height: `${Math.max((m.total / maxVal) * 100, 8)}%` }}
-                  title={`${MONTHS[i]}: ${m.published} published, ${m.accepted} accepted`}>
-                  <div className="w-full bg-emerald-300" style={{ height: `${m.accepted / m.total * 100}%` }} />
-                  <div className="w-full bg-green-400"   style={{ height: `${m.published / m.total * 100}%` }} />
-                </div>
-              ) : (
-                <div className="w-full rounded-t-md bg-slate-100" style={{ height: '6px' }} />
-              )}
-            </div>
-            <span className="text-xs text-slate-400">{MONTHS[i]}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
+
+      {selected && selected.total > 0 && (
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+            {MONTHS_FULL[selectedMonth]} {year} · {selected.total} paper{selected.total !== 1 ? 's' : ''}
+          </p>
+          <div className="space-y-2">
+            {selected.papers.map(p => (
+              <div key={p.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${p.pubStatus === 'published' ? 'bg-green-400' : 'bg-emerald-300'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-700 leading-snug truncate">{p.title}</p>
+                  <p className="text-xs text-slate-400 capitalize mt-0.5">{p.pubStatus}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
