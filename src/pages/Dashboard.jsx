@@ -41,9 +41,15 @@ function EmptyState({ message }) {
 // ── Modal lists ───────────────────────────────────────────────────────────────
 async function openPdf(proj) {
   if (!proj.fileUrl || !supabase) return
+  const newWin = window.open('about:blank', '_blank')
   const { data, error } = await supabase.storage.from('papers').createSignedUrl(proj.fileUrl, 120)
-  if (error || !data?.signedUrl) { alert('Could not open PDF.'); return }
-  window.open(data.signedUrl, '_blank')
+  if (error || !data?.signedUrl) {
+    if (newWin) newWin.close()
+    alert('Could not open PDF.')
+    return
+  }
+  if (newWin) newWin.location.href = data.signedUrl
+  else window.location.href = data.signedUrl
 }
 
 function PublishedList({ projects, submissions, getUserById, dispatch }) {
