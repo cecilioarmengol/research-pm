@@ -394,9 +394,12 @@ function PublicationsChart({ projects }) {
                   <p className="text-sm font-medium text-slate-700 leading-snug truncate">{p.title}</p>
                   <p className="text-xs text-slate-400 capitalize mt-0.5">{p.pubStatus}</p>
                 </div>
-                <Link to={`/projects/${p.id}`} className="p-1 text-slate-300 hover:text-brand-500 transition-colors shrink-0">
-                  <ArrowUpRight size={14} />
-                </Link>
+                {p.fileUrl && (
+                  <button onClick={() => openPdf(p)}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors shrink-0">
+                    <FileText size={13} /> PDF
+                  </button>
+                )}
               </div>
             ))}
           </div>
