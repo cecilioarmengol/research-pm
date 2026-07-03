@@ -1,11 +1,82 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
-import { format, startOfWeek, addWeeks, subWeeks, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, Save, CheckCircle2, BookText } from 'lucide-react'
+import { format, startOfWeek, parseISO } from 'date-fns'
+import { ChevronRight, Save, CheckCircle2, X, Search } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
 import Header from '../components/layout/Header'
+
+function ProjectMultiSelect({ projects, selected, onChange }) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen]   = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function close(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+
+  const filtered = projects.filter(p =>
+    p.title.toLowerCase().includes(query.toLowerCase()) && !selected.includes(p.title)
+  )
+
+  function add(title) {
+    onChange([...selected, title])
+    setQuery('')
+  }
+
+  function remove(title) {
+    onChange(selected.filter(t => t !== title))
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      {selected.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selected.map(title => (
+            <span key={title} className="flex items-center gap-1 text-xs bg-brand-50 text-brand-700 border border-brand-200 px-2 py-1 rounded-full">
+              <span className="max-w-[220px] truncate">{title}</span>
+              <button type="button" onClick={() => remove(title)} className="hover:text-brand-900 shrink-0">
+                <X size={11} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        <input
+          className="input-base pl-8"
+          placeholder="Search and add projects…"
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true) }}
+          onFocus={() => setOpen(true)}
+        />
+      </div>
+      {open && filtered.length > 0 && (
+        <div className="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 max-h-52 overflow-y-auto">
+          {filtered.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onMouseDown={e => { e.preventDefault(); add(p.title) }}
+              className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && query && filtered.length === 0 && (
+        <div className="absolute z-20 w-full bg-white border border-slate-200 rounded-xl shadow-lg mt-1 px-3 py-3 text-sm text-slate-400">
+          No matching projects
+        </div>
+      )}
+    </div>
+  )
+}
 
 function getWeekStart(date) {
   return startOfWeek(date, { weekStartsOn: 1 })
@@ -65,15 +136,6 @@ export default function MyLogbook() {
     }
   }, [weekKey, currentEntry?.id])
 
-  function toggleProject(title) {
-    setForm(f => ({
-      ...f,
-      projectsWorked: f.projectsWorked.includes(title)
-        ? f.projectsWorked.filter(t => t !== title)
-        : [...f.projectsWorked, title],
-    }))
-  }
-
   async function handleSave(e) {
     e.preventDefault()
     setSaving(true)
@@ -113,25 +175,11 @@ export default function MyLogbook() {
             {myProjects.length > 0 && (
               <div>
                 <label className="label">Projects worked on</label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {myProjects.map(p => {
-                    const selected = form.projectsWorked.includes(p.title)
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => toggleProject(p.title)}
-                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${
-                          selected
-                            ? 'bg-brand-500 text-white border-brand-500'
-                            : 'bg-white text-slate-600 border-slate-300 hover:border-brand-400'
-                        }`}
-                      >
-                        {p.title}
-                      </button>
-                    )
-                  })}
-                </div>
+                <ProjectMultiSelect
+                  projects={myProjects}
+                  selected={form.projectsWorked}
+                  onChange={val => setForm(f => ({ ...f, projectsWorked: val }))}
+                />
               </div>
             )}
 
