@@ -128,6 +128,8 @@ function demoReducer(state, action) {
       if (existing) return { ...state, logbookEntries: state.logbookEntries.map(e => e.id === existing.id ? { ...e, ...action.payload, updatedAt: new Date().toISOString() } : e) }
       return { ...state, logbookEntries: [...(state.logbookEntries || []), { id: uid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...action.payload }] }
     }
+    case 'DELETE_LOGBOOK_ENTRY':
+      return { ...state, logbookEntries: (state.logbookEntries || []).filter(e => e.id !== action.payload.id) }
     default: return state
   }
 }
@@ -542,6 +544,11 @@ function useSupabaseData(user) {
       case 'TOGGLE_LOGBOOK_ACCESS':
         await supabase.from('profiles').update({ logbook_enabled: action.payload.enabled }).eq('id', action.payload.userId)
         await loadUsers()
+        break
+
+      case 'DELETE_LOGBOOK_ENTRY':
+        await supabase.from('logbook_entries').delete().eq('id', action.payload.id)
+        await loadLogbookEntries()
         break
 
       case 'ADD_LOGBOOK_ENTRY':

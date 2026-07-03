@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { format, startOfWeek, parseISO } from 'date-fns'
-import { ChevronRight, Save, CheckCircle2, X, Search } from 'lucide-react'
+import { ChevronRight, Save, CheckCircle2, X, Search, Trash2 } from 'lucide-react'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
@@ -136,6 +136,11 @@ export default function MyLogbook() {
     }
   }, [weekKey, currentEntry?.id])
 
+  async function handleDelete(entry) {
+    if (!window.confirm('Delete this logbook entry? This cannot be undone.')) return
+    await dispatch({ type: 'DELETE_LOGBOOK_ENTRY', payload: { id: entry.id } })
+  }
+
   async function handleSave(e) {
     e.preventDefault()
     setSaving(true)
@@ -216,19 +221,30 @@ export default function MyLogbook() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={saving || !form.accomplished.trim()}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-medium rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-50"
-            >
-              {saving ? (
-                <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
-              ) : saved ? (
-                <><CheckCircle2 size={15} /> Saved!</>
-              ) : (
-                <><Save size={15} /> {currentEntry ? 'Update entry' : 'Save entry'}</>
+            <div className="flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={saving || !form.accomplished.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-medium rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-50"
+              >
+                {saving ? (
+                  <><div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Saving…</>
+                ) : saved ? (
+                  <><CheckCircle2 size={15} /> Saved!</>
+                ) : (
+                  <><Save size={15} /> {currentEntry ? 'Update entry' : 'Save entry'}</>
+                )}
+              </button>
+              {currentEntry && (
+                <button
+                  type="button"
+                  onClick={() => handleDelete(currentEntry)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                >
+                  <Trash2 size={14} /> Delete
+                </button>
               )}
-            </button>
+            </div>
           </form>
         </div>
 
@@ -242,13 +258,22 @@ export default function MyLogbook() {
                 const isOpen = historyOpen === entry.id
                 return (
                   <div key={entry.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setHistoryOpen(isOpen ? null : entry.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors text-left"
-                    >
-                      <span className="text-sm font-medium text-slate-700">{formatWeekRange(mon)}</span>
-                      <ChevronRight size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                    </button>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => setHistoryOpen(isOpen ? null : entry.id)}
+                        className="flex-1 flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+                      >
+                        <span className="text-sm font-medium text-slate-700">{formatWeekRange(mon)}</span>
+                        <ChevronRight size={16} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(entry)}
+                        className="p-2 mr-2 text-slate-300 hover:text-red-400 transition-colors rounded-lg hover:bg-red-50"
+                        title="Delete entry"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                     {isOpen && (
                       <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
                         {entry.projectsWorked?.length > 0 && (
