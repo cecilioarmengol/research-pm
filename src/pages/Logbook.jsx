@@ -21,33 +21,60 @@ function formatWeekRange(monday) {
 }
 
 function exportToExcel({ entries, users, weekLabel, allWeeks }) {
-  const getUserName = (userId) => users.find(u => u.id === userId)?.name || 'Unknown'
-  const getUserRole = (userId) => (users.find(u => u.id === userId)?.role || '').replace('_', ' ')
+  const getUser    = (userId) => users.find(u => u.id === userId)
+  const getName    = (userId) => getUser(userId)?.name || 'Unknown'
+  const getRole    = (userId) => (getUser(userId)?.role || '').replace('_', ' ')
+  const getDate    = (e)      => e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : ''
 
-  const rows = entries.map(e => ({
-    'Name':              getUserName(e.userId),
-    'Role':              getUserRole(e.userId),
-    'Week':              e.weekStart,
-    'Projects Worked':   (e.projectsWorked || []).join(', '),
-    'Accomplished':      e.accomplished || '',
-    'Plans for Next Week': e.nextWeek || '',
-    'Blockers / Issues': e.blockers || '',
-    'Submitted':         e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : '',
-  }))
+  // Sort entries: week desc, name asc
+  const sorted = [...entries].sort((a, b) =>
+    b.weekStart.localeCompare(a.weekStart) || getName(a.userId).localeCompare(getName(b.userId))
+  )
 
-  // Sort: by week desc, then by name
-  rows.sort((a, b) => b['Week'].localeCompare(a['Week']) || a['Name'].localeCompare(b['Name']))
+  // ── Sheet 1: one row per project ─────────────────────────────────────────────
+  const detailRows = sorted.flatMap(e => {
+    const projects = e.projectsWorked?.length ? e.projectsWorked : ['—']
+    return projects.map(proj => ({
+      'Name':              getName(e.userId),
+      'Role':              getRole(e.userId),
+      'Week':              e.weekStart,
+      'Project':           proj,
+      'Accomplished':      e.accomplished || '',
+      'Plans for Next Week': e.nextWeek   || '',
+      'Blockers / Issues': e.blockers     || '',
+      'Submitted':         getDate(e),
+    }))
+  })
 
-  const ws = XLSX.utils.json_to_sheet(rows)
-
-  // Column widths
-  ws['!cols'] = [
-    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 30 },
+  const wsDetail = XLSX.utils.json_to_sheet(detailRows)
+  wsDetail['!cols'] = [
+    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 45 },
     { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
   ]
 
+  // ── Sheet 2: one row per person (summary) ────────────────────────────────────
+  const summaryRows = sorted.map(e => ({
+    'Name':              getName(e.userId),
+    'Role':              getRole(e.userId),
+    'Week':              e.weekStart,
+    'Projects (#)':      (e.projectsWorked || []).length,
+    'Projects List':     (e.projectsWorked || []).join(' | '),
+    'Accomplished':      e.accomplished || '',
+    'Plans for Next Week': e.nextWeek   || '',
+    'Blockers / Issues': e.blockers     || '',
+    'Submitted':         getDate(e),
+  }))
+
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows)
+  wsSummary['!cols'] = [
+    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 10 },
+    { wch: 40 }, { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+  ]
+
   const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Logbook')
+  XLSX.utils.book_append_sheet(wb, wsDetail,  'By Project')
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary')
+
   const filename = allWeeks ? 'logbook_all.xlsx' : `logbook_${weekLabel}.xlsx`
   XLSX.writeFile(wb, filename)
 }
