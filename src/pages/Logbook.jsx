@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { format, startOfWeek, addWeeks, addDays, parseISO } from 'date-fns'
-import { ChevronLeft, ChevronRight, BookText, Users, CheckCircle2, Clock, AlertCircle } from 'lucide-react'
+import { ChevronLeft, ChevronRight, BookText, Users, CheckCircle2, Clock, AlertCircle, Download } from 'lucide-react'
+import * as XLSX from 'xlsx'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
@@ -17,6 +18,38 @@ function formatWeekRange(monday) {
     return `${format(monday, 'MMM d')} – ${format(sunday, 'd, yyyy')}`
   }
   return `${format(monday, 'MMM d')} – ${format(sunday, 'MMM d, yyyy')}`
+}
+
+function exportToExcel({ entries, users, weekLabel, allWeeks }) {
+  const getUserName = (userId) => users.find(u => u.id === userId)?.name || 'Unknown'
+  const getUserRole = (userId) => (users.find(u => u.id === userId)?.role || '').replace('_', ' ')
+
+  const rows = entries.map(e => ({
+    'Name':              getUserName(e.userId),
+    'Role':              getUserRole(e.userId),
+    'Week':              e.weekStart,
+    'Projects Worked':   (e.projectsWorked || []).join(', '),
+    'Accomplished':      e.accomplished || '',
+    'Plans for Next Week': e.nextWeek || '',
+    'Blockers / Issues': e.blockers || '',
+    'Submitted':         e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : '',
+  }))
+
+  // Sort: by week desc, then by name
+  rows.sort((a, b) => b['Week'].localeCompare(a['Week']) || a['Name'].localeCompare(b['Name']))
+
+  const ws = XLSX.utils.json_to_sheet(rows)
+
+  // Column widths
+  ws['!cols'] = [
+    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 30 },
+    { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+  ]
+
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb, ws, 'Logbook')
+  const filename = allWeeks ? 'logbook_all.xlsx' : `logbook_${weekLabel}.xlsx`
+  XLSX.writeFile(wb, filename)
 }
 
 function Toggle({ enabled, onChange }) {
@@ -175,15 +208,33 @@ export default function Logbook() {
               </button>
             </div>
 
-            {/* Summary chips */}
+            {/* Summary chips + export */}
             {enabledUsers.length > 0 && (
-              <div className="flex gap-3">
-                <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
-                  {submitted.length} submitted
-                </span>
-                <span className="text-xs font-medium bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">
-                  {pending.length} pending
-                </span>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex gap-2">
+                  <span className="text-xs font-medium bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full">
+                    {submitted.length} submitted
+                  </span>
+                  <span className="text-xs font-medium bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full">
+                    {pending.length} pending
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportToExcel({ entries: entriesThisWeek, users, weekLabel: weekKey, allWeeks: false })}
+                    disabled={entriesThisWeek.length === 0}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors disabled:opacity-40"
+                  >
+                    <Download size={13} /> This week
+                  </button>
+                  <button
+                    onClick={() => exportToExcel({ entries: logbookEntries, users, weekLabel: 'all', allWeeks: true })}
+                    disabled={logbookEntries.length === 0}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-brand-200 bg-brand-50 text-brand-600 hover:bg-brand-100 transition-colors disabled:opacity-40"
+                  >
+                    <Download size={13} /> All entries
+                  </button>
+                </div>
               </div>
             )}
 
