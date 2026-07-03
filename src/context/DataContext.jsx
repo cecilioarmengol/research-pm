@@ -557,6 +557,7 @@ function useSupabaseData(user) {
           user_id:         action.payload.userId || user.id,
           week_start:      action.payload.weekStart,
           projects_worked: action.payload.projectsWorked || [],
+          project_notes:   action.payload.projectNotes   || {},
           accomplished:    action.payload.accomplished    || '',
           next_week:       action.payload.nextWeek        || '',
           blockers:        action.payload.blockers        || '',

@@ -96,6 +96,7 @@ export const mapLogbookEntry = e => ({
   userId:         e.user_id,
   weekStart:      e.week_start,
   projectsWorked: e.projects_worked || [],
+  projectNotes:   e.project_notes   || {},
   accomplished:   e.accomplished    || '',
   nextWeek:       e.next_week       || '',
   blockers:       e.blockers        || '',

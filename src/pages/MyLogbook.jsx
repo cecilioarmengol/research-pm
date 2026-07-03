@@ -91,7 +91,7 @@ function formatWeekRange(monday) {
   return `${format(monday, 'MMM d')} – ${format(sunday, 'MMM d, yyyy')}`
 }
 
-const EMPTY_FORM = { projectsWorked: [], accomplished: '', nextWeek: '', blockers: '' }
+const EMPTY_FORM = { projectsWorked: [], projectNotes: {}, accomplished: '', nextWeek: '', blockers: '' }
 
 export default function MyLogbook() {
   const { user } = useAuth()
@@ -127,6 +127,7 @@ export default function MyLogbook() {
     if (currentEntry) {
       setForm({
         projectsWorked: currentEntry.projectsWorked || [],
+        projectNotes:   currentEntry.projectNotes   || {},
         accomplished:   currentEntry.accomplished   || '',
         nextWeek:       currentEntry.nextWeek       || '',
         blockers:       currentEntry.blockers       || '',
@@ -135,6 +136,17 @@ export default function MyLogbook() {
       setForm(EMPTY_FORM)
     }
   }, [weekKey, currentEntry?.id])
+
+  function setProjectNote(title, value) {
+    setForm(f => ({ ...f, projectNotes: { ...f.projectNotes, [title]: value } }))
+  }
+
+  function removeProject(title) {
+    setForm(f => {
+      const { [title]: _, ...rest } = f.projectNotes
+      return { ...f, projectsWorked: f.projectsWorked.filter(t => t !== title), projectNotes: rest }
+    })
+  }
 
   async function handleDelete(entry) {
     if (!window.confirm('Delete this logbook entry? This cannot be undone.')) return
@@ -175,25 +187,55 @@ export default function MyLogbook() {
             )}
           </div>
 
-          <form onSubmit={handleSave} className="space-y-4">
-            {/* Projects */}
+          <form onSubmit={handleSave} className="space-y-5">
+
+            {/* Projects + per-project accomplished */}
             {myProjects.length > 0 && (
-              <div>
+              <div className="space-y-3">
                 <label className="label">Projects worked on</label>
                 <ProjectMultiSelect
                   projects={myProjects}
                   selected={form.projectsWorked}
                   onChange={val => setForm(f => ({ ...f, projectsWorked: val }))}
                 />
+                {form.projectsWorked.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    {form.projectsWorked.map(title => (
+                      <div key={title} className="border border-brand-100 bg-brand-50/40 rounded-xl p-3">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <p className="text-xs font-semibold text-brand-600 leading-snug">{title}</p>
+                          <button type="button" onClick={() => removeProject(title)}
+                            className="text-slate-300 hover:text-red-400 transition-colors shrink-0 mt-0.5">
+                            <X size={13} />
+                          </button>
+                        </div>
+                        <textarea
+                          className="input-base resize-none text-sm bg-white"
+                          rows={3}
+                          placeholder="What did you accomplish on this project?"
+                          value={form.projectNotes[title] || ''}
+                          onChange={e => setProjectNote(title, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
+            {/* General notes (non-project work) */}
             <div>
-              <label className="label">What I accomplished this week *</label>
+              <label className="label">
+                General notes
+                {form.projectsWorked.length > 0
+                  ? <span className="text-slate-400 font-normal ml-1">(non-project work, optional)</span>
+                  : <span className="text-red-400 ml-1">*</span>
+                }
+              </label>
               <textarea
                 className="input-base resize-none"
-                rows={4}
-                placeholder="Describe what you worked on and completed..."
+                rows={3}
+                placeholder="Anything not tied to a specific project…"
                 value={form.accomplished}
                 onChange={e => setForm(f => ({ ...f, accomplished: e.target.value }))}
               />
@@ -224,7 +266,7 @@ export default function MyLogbook() {
             <div className="flex items-center gap-3">
               <button
                 type="submit"
-                disabled={saving || !form.accomplished.trim()}
+                disabled={saving || (form.projectsWorked.length === 0 && !form.accomplished.trim())}
                 className="flex items-center gap-2 px-4 py-2 bg-brand-500 text-white text-sm font-medium rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-50"
               >
                 {saving ? (
@@ -277,18 +319,22 @@ export default function MyLogbook() {
                     {isOpen && (
                       <div className="px-4 pb-4 border-t border-slate-100 pt-3 space-y-3">
                         {entry.projectsWorked?.length > 0 && (
-                          <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Projects</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {entry.projectsWorked.map((p, i) => (
-                                <span key={i} className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">{p}</span>
-                              ))}
-                            </div>
+                          <div className="space-y-2">
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Projects</p>
+                            {entry.projectsWorked.map((p, i) => (
+                              <div key={i} className="border border-brand-100 bg-brand-50/40 rounded-xl p-3">
+                                <p className="text-xs font-semibold text-brand-600 mb-1">{p}</p>
+                                {entry.projectNotes?.[p]
+                                  ? <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.projectNotes[p]}</p>
+                                  : <p className="text-xs text-slate-400 italic">No notes</p>
+                                }
+                              </div>
+                            ))}
                           </div>
                         )}
                         {entry.accomplished && (
                           <div>
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Accomplished</p>
+                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">General notes</p>
                             <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.accomplished}</p>
                           </div>
                         )}

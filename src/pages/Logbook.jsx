@@ -97,7 +97,8 @@ function exportToExcel({ entries, users, weekLabel, allWeeks }) {
       'Role':                getRole(e.userId),
       'Week':                e.weekStart,
       'Project':             proj,
-      'Accomplished':        e.accomplished || '',
+      'Accomplished':        (proj !== '—' && e.projectNotes?.[proj]) ? e.projectNotes[proj] : (e.accomplished || ''),
+      'General Notes':       e.accomplished || '',
       'Plans for Next Week': e.nextWeek     || '',
       'Blockers / Issues':   e.blockers     || '',
       'Submitted':           getDate(e),
@@ -107,9 +108,9 @@ function exportToExcel({ entries, users, weekLabel, allWeeks }) {
   const wsDetail = XLSX.utils.json_to_sheet(detailRows)
   wsDetail['!cols'] = [
     { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 44 },
-    { wch: 48 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
+    { wch: 48 }, { wch: 36 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
   ]
-  styleSheet(wsDetail, { centeredCols: [1, 2, 7], accentCols: [3], boldCols: [0] })
+  styleSheet(wsDetail, { centeredCols: [1, 2, 8], accentCols: [3], boldCols: [0] })
 
   // ── Sheet 2: Summary (one row per person) ────────────────────────────────
   const summaryRows = sorted.map(e => ({
@@ -184,18 +185,22 @@ function EntryCard({ entry, user: member }) {
           ) : (
             <>
               {entry.projectsWorked?.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Projects worked on</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {entry.projectsWorked.map((p, i) => (
-                      <span key={i} className="text-xs bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full">{p}</span>
-                    ))}
-                  </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Projects worked on</p>
+                  {entry.projectsWorked.map((p, i) => (
+                    <div key={i} className="border border-brand-100 bg-brand-50/40 rounded-xl p-3">
+                      <p className="text-xs font-semibold text-brand-600 mb-1">{p}</p>
+                      {entry.projectNotes?.[p]
+                        ? <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.projectNotes[p]}</p>
+                        : <p className="text-xs text-slate-400 italic">No notes</p>
+                      }
+                    </div>
+                  ))}
                 </div>
               )}
               {entry.accomplished && (
                 <div>
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Accomplished this week</p>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">General notes</p>
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">{entry.accomplished}</p>
                 </div>
               )}
