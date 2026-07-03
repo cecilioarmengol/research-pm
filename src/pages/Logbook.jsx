@@ -20,44 +20,100 @@ function formatWeekRange(monday) {
   return `${format(monday, 'MMM d')} – ${format(sunday, 'MMM d, yyyy')}`
 }
 
-// ── Excel styling helpers ─────────────────────────────────────────────────────
-const COLORS = {
-  headerBg:   '1E293B', // slate-900
-  headerText: 'FFFFFF',
-  accent:     '6366F1', // indigo-500  (project text)
-  row1:       'FFFFFF',
-  row2:       'F1F5F9', // slate-100
-  border:     'CBD5E1', // slate-300
-  nameText:   '0F172A', // slate-950
-  mutedText:  '64748B', // slate-500
+// ── Excel palette ─────────────────────────────────────────────────────────────
+const PAL = {
+  titleBg:   '1E1B4B', // indigo-950
+  titleFg:   'FFFFFF',
+  subBg:     '312E81', // indigo-900
+  subFg:     'C7D2FE', // indigo-200
+  headerBg:  '4F46E5', // indigo-600
+  headerFg:  'FFFFFF',
+  headerUl:  '3730A3', // indigo-800 (medium underline)
+  groupBg:   'EEF2FF', // indigo-50  (first row of each person block)
+  rowBg:     'FFFFFF',
+  altBg:     'F5F3FF', // violet-50  (summary sheet alt rows)
+  accentFg:  '4338CA', // indigo-700 (project text)
+  accentBdr: '6366F1', // indigo-500 (project left border)
+  nameFg:    '0F172A', // slate-950
+  textFg:    '374151', // gray-700
+  mutedFg:   '6B7280', // gray-500
+  divider:   'E0E7FF', // indigo-100 (row bottom line)
+  groupEnd:  'A5B4FC', // indigo-300 (stronger line between person blocks)
 }
 
-function border() {
-  return ['top','bottom','left','right'].reduce((o, side) => {
-    o[side] = { style: 'thin', color: { rgb: COLORS.border } }
-    return o
-  }, {})
-}
+function applyDetailStyles(ws, sorted) {
+  if (!ws['!ref']) return
+  const range = XLSX.utils.decode_range(ws['!ref'])
 
-function addDetailMerges(ws, sorted) {
-  const merges = []
-  let rowIdx = 1 // row 0 is header
-
+  // Which sheet rows are the first / last row of each person's block
+  // (data starts at sheet row 3: title=0, subtitle=1, header=2)
+  const groupStarts = new Set()
+  const groupEnds   = new Set()
+  let ri = 3
   sorted.forEach(e => {
-    const count = Math.max((e.projectsWorked?.length || 0), 1)
-    if (count > 1) {
-      // Merge: Name(0) Role(1) Week(2) GeneralNotes(5) Plans(6) Blockers(7) Submitted(8)
-      ;[0, 1, 2, 5, 6, 7, 8].forEach(c => {
-        merges.push({ s: { r: rowIdx, c }, e: { r: rowIdx + count - 1, c } })
-      })
-    }
-    rowIdx += count
+    const n = Math.max((e.projectsWorked?.length || 0), 1)
+    groupStarts.add(ri)
+    groupEnds.add(ri + n - 1)
+    ri += n
   })
 
-  if (merges.length) ws['!merges'] = merges
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C })
+      if (!ws[addr]) ws[addr] = { v: '', t: 's' }
+
+      if (R === 0) {
+        ws[addr].s = {
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.titleBg } },
+          font:      { bold: true, sz: 14, color: { rgb: PAL.titleFg }, name: 'Calibri' },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+        }
+      } else if (R === 1) {
+        ws[addr].s = {
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.subBg } },
+          font:      { italic: true, sz: 9, color: { rgb: PAL.subFg }, name: 'Calibri' },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+        }
+      } else if (R === 2) {
+        const center = [1, 2, 8].includes(C)
+        ws[addr].s = {
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.headerBg } },
+          font:      { bold: true, sz: 10, color: { rgb: PAL.headerFg }, name: 'Calibri' },
+          alignment: { horizontal: center ? 'center' : 'left', vertical: 'center', indent: center ? 0 : 1 },
+          border:    { bottom: { style: 'medium', color: { rgb: PAL.headerUl } } },
+        }
+      } else {
+        const isStart   = groupStarts.has(R)
+        const isEnd     = groupEnds.has(R)
+        const isProject = C === 3
+        const isName    = C === 0
+        const isCenter  = [1, 2, 8].includes(C)
+        const isMuted   = [1, 2, 8].includes(C)
+        ws[addr].s = {
+          fill:  { patternType: 'solid', fgColor: { rgb: isStart ? PAL.groupBg : PAL.rowBg } },
+          font:  {
+            sz: 10, name: 'Calibri', bold: isName,
+            color: { rgb: isProject ? PAL.accentFg : isMuted ? PAL.mutedFg : isName ? PAL.nameFg : PAL.textFg },
+          },
+          alignment: {
+            horizontal: isCenter ? 'center' : 'left',
+            vertical:   'top',
+            wrapText:   true,
+            indent:     (!isCenter && !isProject) ? 1 : 0,
+          },
+          border: {
+            bottom: { style: 'thin', color: { rgb: isEnd ? PAL.groupEnd : PAL.divider } },
+            ...(isProject ? { left: { style: 'medium', color: { rgb: PAL.accentBdr } } } : {}),
+          },
+        }
+      }
+    }
+  }
+
+  ws['!freeze'] = { xSplit: 0, ySplit: 3 }
 }
 
-function styleSheet(ws, { centeredCols = [], accentCols = [], boldCols = [] } = {}) {
+function applySummaryStyles(ws) {
   if (!ws['!ref']) return
   const range = XLSX.utils.decode_range(ws['!ref'])
 
@@ -68,88 +124,157 @@ function styleSheet(ws, { centeredCols = [], accentCols = [], boldCols = [] } = 
 
       if (R === 0) {
         ws[addr].s = {
-          fill: { patternType: 'solid', fgColor: { rgb: COLORS.headerBg } },
-          font: { bold: true, color: { rgb: COLORS.headerText }, sz: 11, name: 'Calibri' },
-          alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
-          border: border(),
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.titleBg } },
+          font:      { bold: true, sz: 14, color: { rgb: PAL.titleFg }, name: 'Calibri' },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+        }
+      } else if (R === 1) {
+        ws[addr].s = {
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.subBg } },
+          font:      { italic: true, sz: 9, color: { rgb: PAL.subFg }, name: 'Calibri' },
+          alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
+        }
+      } else if (R === 2) {
+        const center = [1, 2, 3, 8].includes(C)
+        ws[addr].s = {
+          fill:      { patternType: 'solid', fgColor: { rgb: PAL.headerBg } },
+          font:      { bold: true, sz: 10, color: { rgb: PAL.headerFg }, name: 'Calibri' },
+          alignment: { horizontal: center ? 'center' : 'left', vertical: 'center', indent: center ? 0 : 1 },
+          border:    { bottom: { style: 'medium', color: { rgb: PAL.headerUl } } },
         }
       } else {
-        const isAlt = R % 2 === 0
-        const isAccent = accentCols.includes(C)
-        const isBold   = boldCols.includes(C)
-        const isCentered = centeredCols.includes(C)
+        const isAlt    = (R - 3) % 2 === 1
+        const isName   = C === 0
+        const isCount  = C === 3
+        const isCenter = [1, 2, 3, 8].includes(C)
+        const isMuted  = [1, 2, 8].includes(C)
         ws[addr].s = {
-          fill: { patternType: 'solid', fgColor: { rgb: isAlt ? COLORS.row2 : COLORS.row1 } },
-          font: {
-            sz: 10, name: 'Calibri', bold: isBold,
-            color: { rgb: isAccent ? COLORS.accent : COLORS.nameText },
+          fill:  { patternType: 'solid', fgColor: { rgb: isAlt ? PAL.altBg : PAL.rowBg } },
+          font:  {
+            sz: 10, name: 'Calibri',
+            bold:  isName || isCount,
+            color: { rgb: isCount ? PAL.accentFg : isMuted ? PAL.mutedFg : isName ? PAL.nameFg : PAL.textFg },
           },
-          alignment: { horizontal: isCentered ? 'center' : 'left', vertical: 'top', wrapText: true },
-          border: border(),
+          alignment: {
+            horizontal: isCenter ? 'center' : 'left',
+            vertical:   'center',
+            wrapText:   true,
+            indent:     !isCenter ? 1 : 0,
+          },
+          border: { bottom: { style: 'thin', color: { rgb: PAL.divider } } },
         }
       }
     }
   }
 
-  // Freeze header row
-  ws['!freeze'] = { xSplit: 0, ySplit: 1 }
-  // Row heights: header taller
-  ws['!rows'] = [{ hpt: 28 }]
+  ws['!freeze'] = { xSplit: 0, ySplit: 3 }
 }
 
 function exportToExcel({ entries, users, weekLabel, allWeeks }) {
-  const getUser = (userId) => users.find(u => u.id === userId)
-  const getName = (userId) => getUser(userId)?.name || 'Unknown'
-  const getRole = (userId) => (getUser(userId)?.role || '').replace('_', ' ')
-  const getDate = (e)      => e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : ''
+  const getUser = id => users.find(u => u.id === id)
+  const getName = id => getUser(id)?.name || 'Unknown'
+  const getRole = id => (getUser(id)?.role || '').replace('_', ' ')
+  const getDate = e  => e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : ''
 
   const sorted = [...entries].sort((a, b) =>
     b.weekStart.localeCompare(a.weekStart) || getName(a.userId).localeCompare(getName(b.userId))
   )
 
-  // ── Sheet 1: By Project (one row per project) ─────────────────────────────
-  const detailRows = sorted.flatMap(e => {
+  const exportDate = format(new Date(), 'MMMM d, yyyy  ·  h:mm a')
+  const NCOLS = 9
+
+  // ── Sheet 1: By Project ───────────────────────────────────────────────────
+  const detailHeaders = [
+    'Name', 'Role', 'Week', 'Project', 'Accomplished',
+    'General Notes', 'Plans for Next Week', 'Blockers / Issues', 'Submitted',
+  ]
+  const detailDataRows = sorted.flatMap(e => {
     const projects = e.projectsWorked?.length ? e.projectsWorked : ['—']
-    return projects.map(proj => ({
-      'Name':                getName(e.userId),
-      'Role':                getRole(e.userId),
-      'Week':                e.weekStart,
-      'Project':             proj,
-      'Accomplished':        (proj !== '—' && e.projectNotes?.[proj]) ? e.projectNotes[proj] : (e.accomplished || ''),
-      'General Notes':       e.accomplished || '',
-      'Plans for Next Week': e.nextWeek     || '',
-      'Blockers / Issues':   e.blockers     || '',
-      'Submitted':           getDate(e),
-    }))
+    return projects.map(proj => [
+      getName(e.userId),
+      getRole(e.userId),
+      e.weekStart,
+      proj,
+      (proj !== '—' && e.projectNotes?.[proj]) ? e.projectNotes[proj] : (e.accomplished || ''),
+      e.accomplished || '',
+      e.nextWeek    || '',
+      e.blockers    || '',
+      getDate(e),
+    ])
   })
 
-  const wsDetail = XLSX.utils.json_to_sheet(detailRows)
-  wsDetail['!cols'] = [
-    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 44 },
-    { wch: 48 }, { wch: 36 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
+  const detailAoa = [
+    ['RESEARCH LOGBOOK', ...Array(NCOLS - 1).fill('')],
+    [`Exported  ${exportDate}     ${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`, ...Array(NCOLS - 1).fill('')],
+    detailHeaders,
+    ...detailDataRows,
   ]
-  styleSheet(wsDetail, { centeredCols: [1, 2, 8], accentCols: [3], boldCols: [0] })
-  addDetailMerges(wsDetail, sorted)
 
-  // ── Sheet 2: Summary (one row per person) ────────────────────────────────
-  const summaryRows = sorted.map(e => ({
-    'Name':                getName(e.userId),
-    'Role':                getRole(e.userId),
-    'Week':                e.weekStart,
-    'Projects (#)':        (e.projectsWorked || []).length,
-    'Projects':            (e.projectsWorked || []).join('  |  '),
-    'Accomplished':        e.accomplished || '',
-    'Plans for Next Week': e.nextWeek     || '',
-    'Blockers / Issues':   e.blockers     || '',
-    'Submitted':           getDate(e),
-  }))
+  const wsDetail = XLSX.utils.aoa_to_sheet(detailAoa)
+  wsDetail['!cols'] = [
+    { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 42 },
+    { wch: 46 }, { wch: 34 }, { wch: 36 }, { wch: 26 }, { wch: 13 },
+  ]
+  wsDetail['!rows'] = [
+    { hpt: 38 }, { hpt: 22 }, { hpt: 28 },
+    ...detailDataRows.map(() => ({ hpt: 54 })),
+  ]
 
-  const wsSummary = XLSX.utils.json_to_sheet(summaryRows)
+  const detailMerges = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: NCOLS - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: NCOLS - 1 } },
+  ]
+  let ri = 3
+  sorted.forEach(e => {
+    const n = Math.max((e.projectsWorked?.length || 0), 1)
+    if (n > 1) {
+      ;[0, 1, 2, 5, 6, 7, 8].forEach(c =>
+        detailMerges.push({ s: { r: ri, c }, e: { r: ri + n - 1, c } })
+      )
+    }
+    ri += n
+  })
+  wsDetail['!merges'] = detailMerges
+  applyDetailStyles(wsDetail, sorted)
+
+  // ── Sheet 2: Summary ──────────────────────────────────────────────────────
+  const summaryHeaders = [
+    'Name', 'Role', 'Week', 'Projects (#)', 'Projects',
+    'Accomplished', 'Plans for Next Week', 'Blockers / Issues', 'Submitted',
+  ]
+  const summaryDataRows = sorted.map(e => [
+    getName(e.userId),
+    getRole(e.userId),
+    e.weekStart,
+    (e.projectsWorked || []).length || '',
+    (e.projectsWorked || []).join('  ·  '),
+    e.accomplished || '',
+    e.nextWeek    || '',
+    e.blockers    || '',
+    getDate(e),
+  ])
+
+  const summaryAoa = [
+    ['RESEARCH LOGBOOK  —  SUMMARY', ...Array(NCOLS - 1).fill('')],
+    [`Exported  ${exportDate}     ${entries.length} entr${entries.length !== 1 ? 'ies' : 'y'}`, ...Array(NCOLS - 1).fill('')],
+    summaryHeaders,
+    ...summaryDataRows,
+  ]
+
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryAoa)
   wsSummary['!cols'] = [
-    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 11 },
+    { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
     { wch: 40 }, { wch: 48 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
   ]
-  styleSheet(wsSummary, { centeredCols: [1, 2, 3, 8], boldCols: [0] })
+  wsSummary['!rows'] = [
+    { hpt: 38 }, { hpt: 22 }, { hpt: 28 },
+    ...summaryDataRows.map(() => ({ hpt: 44 })),
+  ]
+  wsSummary['!merges'] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: NCOLS - 1 } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: NCOLS - 1 } },
+  ]
+  applySummaryStyles(wsSummary)
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, wsDetail,  'By Project')
