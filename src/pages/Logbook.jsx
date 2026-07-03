@@ -264,7 +264,7 @@ export default function Logbook() {
             <p className="text-xs text-slate-400">
               Enable team members to submit weekly logbook entries. Only you and the PI can read them.
             </p>
-            {users.filter(u => u.id !== user.id).map(member => (
+            {users.map(member => (
               <div key={member.id} className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3">
                 <Avatar user={member} size="sm" />
                 <div className="flex-1 min-w-0">

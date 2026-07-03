@@ -14,6 +14,7 @@ const navItems = [
   { to: '/journals',     label: 'Journals',     icon: Library },
   { to: '/congresses',   label: 'Congresses',   icon: Globe   },
   { to: '/logbook',      label: 'Logbook',      icon: BookText,        roles: ['admin'] },
+  { to: '/my-logbook',   label: 'My Logbook',   icon: BookText,        roles: ['admin'] },
 ]
 
 const piNavItems = [
@@ -22,6 +23,7 @@ const piNavItems = [
   { to: '/journals',     label: 'Journals',    icon: Library    },
   { to: '/congresses',   label: 'Congresses',  icon: Globe      },
   { to: '/logbook',      label: 'Logbook',     icon: BookText   },
+  { to: '/my-logbook',   label: 'My Logbook',  icon: BookText   },
 ]
 
 const adminItems = [
