@@ -135,8 +135,8 @@ function applySummaryStyles(ws) {
           alignment: { horizontal: 'left', vertical: 'center', indent: 1 },
         }
       } else if (R === 2) {
-        // Summary cols: Name(0) Role(1) Week(2) Accomplished(3) Plans(4) Blockers(5) Submitted(6)
-        const center = [1, 2, 6].includes(C)
+        // Summary cols: Name(0) Role(1) Week(2) Projects #(3) Accomplished(4) Plans(5) Blockers(6) Submitted(7)
+        const center = [1, 2, 3, 7].includes(C)
         ws[addr].s = {
           fill:      { patternType: 'solid', fgColor: { rgb: PAL.headerBg } },
           font:      { bold: true, sz: 10, color: { rgb: PAL.headerFg }, name: 'Calibri' },
@@ -146,14 +146,15 @@ function applySummaryStyles(ws) {
       } else {
         const isAlt    = (R - 3) % 2 === 1
         const isName   = C === 0
-        const isCenter = [1, 2, 6].includes(C)
-        const isMuted  = [1, 2, 6].includes(C)
+        const isCount  = C === 3
+        const isCenter = [1, 2, 3, 7].includes(C)
+        const isMuted  = [1, 2, 7].includes(C)
         ws[addr].s = {
           fill:  { patternType: 'solid', fgColor: { rgb: isAlt ? PAL.altBg : PAL.rowBg } },
           font:  {
             sz: 10, name: 'Calibri',
-            bold:  isName,
-            color: { rgb: isMuted ? PAL.mutedFg : isName ? PAL.nameFg : PAL.textFg },
+            bold:  isName || isCount,
+            color: { rgb: isCount ? PAL.accentFg : isMuted ? PAL.mutedFg : isName ? PAL.nameFg : PAL.textFg },
           },
           alignment: {
             horizontal: isCenter ? 'center' : 'left',
@@ -238,15 +239,16 @@ function exportToExcel({ entries, users, weekLabel, allWeeks }) {
   applyDetailStyles(wsDetail, sorted)
 
   // ── Sheet 2: Summary ──────────────────────────────────────────────────────
-  const SCOLS = 7
+  const SCOLS = 8
   const summaryHeaders = [
-    'Name', 'Role', 'Week',
+    'Name', 'Role', 'Week', 'Projects (#)',
     'Accomplished', 'Plans for Next Week', 'Blockers / Issues', 'Submitted',
   ]
   const summaryDataRows = sorted.map(e => [
     getName(e.userId),
     getRole(e.userId),
     e.weekStart,
+    (e.projectsWorked || []).length || '',
     e.accomplished || '',
     e.nextWeek    || '',
     e.blockers    || '',
@@ -262,7 +264,7 @@ function exportToExcel({ entries, users, weekLabel, allWeeks }) {
 
   const wsSummary = XLSX.utils.aoa_to_sheet(summaryAoa)
   wsSummary['!cols'] = [
-    { wch: 22 }, { wch: 14 }, { wch: 12 },
+    { wch: 22 }, { wch: 14 }, { wch: 12 }, { wch: 12 },
     { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 13 },
   ]
   wsSummary['!rows'] = [
