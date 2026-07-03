@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { format, startOfWeek, addWeeks, addDays, parseISO } from 'date-fns'
 import { ChevronLeft, ChevronRight, BookText, Users, CheckCircle2, Clock, AlertCircle, Download } from 'lucide-react'
-import * as XLSX from 'xlsx'
+import * as XLSX from 'xlsx-js-style'
 import { useData } from '../context/DataContext'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/layout/Layout'
@@ -20,56 +20,116 @@ function formatWeekRange(monday) {
   return `${format(monday, 'MMM d')} – ${format(sunday, 'MMM d, yyyy')}`
 }
 
-function exportToExcel({ entries, users, weekLabel, allWeeks }) {
-  const getUser    = (userId) => users.find(u => u.id === userId)
-  const getName    = (userId) => getUser(userId)?.name || 'Unknown'
-  const getRole    = (userId) => (getUser(userId)?.role || '').replace('_', ' ')
-  const getDate    = (e)      => e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : ''
+// ── Excel styling helpers ─────────────────────────────────────────────────────
+const COLORS = {
+  headerBg:   '1E293B', // slate-900
+  headerText: 'FFFFFF',
+  accent:     '6366F1', // indigo-500  (project text)
+  row1:       'FFFFFF',
+  row2:       'F1F5F9', // slate-100
+  border:     'CBD5E1', // slate-300
+  nameText:   '0F172A', // slate-950
+  mutedText:  '64748B', // slate-500
+}
 
-  // Sort entries: week desc, name asc
+function border() {
+  return ['top','bottom','left','right'].reduce((o, side) => {
+    o[side] = { style: 'thin', color: { rgb: COLORS.border } }
+    return o
+  }, {})
+}
+
+function styleSheet(ws, { centeredCols = [], accentCols = [], boldCols = [] } = {}) {
+  if (!ws['!ref']) return
+  const range = XLSX.utils.decode_range(ws['!ref'])
+
+  for (let R = range.s.r; R <= range.e.r; R++) {
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C })
+      if (!ws[addr]) ws[addr] = { v: '', t: 's' }
+
+      if (R === 0) {
+        ws[addr].s = {
+          fill: { patternType: 'solid', fgColor: { rgb: COLORS.headerBg } },
+          font: { bold: true, color: { rgb: COLORS.headerText }, sz: 11, name: 'Calibri' },
+          alignment: { horizontal: 'center', vertical: 'center', wrapText: false },
+          border: border(),
+        }
+      } else {
+        const isAlt = R % 2 === 0
+        const isAccent = accentCols.includes(C)
+        const isBold   = boldCols.includes(C)
+        const isCentered = centeredCols.includes(C)
+        ws[addr].s = {
+          fill: { patternType: 'solid', fgColor: { rgb: isAlt ? COLORS.row2 : COLORS.row1 } },
+          font: {
+            sz: 10, name: 'Calibri', bold: isBold,
+            color: { rgb: isAccent ? COLORS.accent : COLORS.nameText },
+          },
+          alignment: { horizontal: isCentered ? 'center' : 'left', vertical: 'top', wrapText: true },
+          border: border(),
+        }
+      }
+    }
+  }
+
+  // Freeze header row
+  ws['!freeze'] = { xSplit: 0, ySplit: 1 }
+  // Row heights: header taller
+  ws['!rows'] = [{ hpt: 28 }]
+}
+
+function exportToExcel({ entries, users, weekLabel, allWeeks }) {
+  const getUser = (userId) => users.find(u => u.id === userId)
+  const getName = (userId) => getUser(userId)?.name || 'Unknown'
+  const getRole = (userId) => (getUser(userId)?.role || '').replace('_', ' ')
+  const getDate = (e)      => e.updatedAt ? format(parseISO(e.updatedAt), 'yyyy-MM-dd') : ''
+
   const sorted = [...entries].sort((a, b) =>
     b.weekStart.localeCompare(a.weekStart) || getName(a.userId).localeCompare(getName(b.userId))
   )
 
-  // ── Sheet 1: one row per project ─────────────────────────────────────────────
+  // ── Sheet 1: By Project (one row per project) ─────────────────────────────
   const detailRows = sorted.flatMap(e => {
     const projects = e.projectsWorked?.length ? e.projectsWorked : ['—']
     return projects.map(proj => ({
-      'Name':              getName(e.userId),
-      'Role':              getRole(e.userId),
-      'Week':              e.weekStart,
-      'Project':           proj,
-      'Accomplished':      e.accomplished || '',
-      'Plans for Next Week': e.nextWeek   || '',
-      'Blockers / Issues': e.blockers     || '',
-      'Submitted':         getDate(e),
+      'Name':                getName(e.userId),
+      'Role':                getRole(e.userId),
+      'Week':                e.weekStart,
+      'Project':             proj,
+      'Accomplished':        e.accomplished || '',
+      'Plans for Next Week': e.nextWeek     || '',
+      'Blockers / Issues':   e.blockers     || '',
+      'Submitted':           getDate(e),
     }))
   })
 
   const wsDetail = XLSX.utils.json_to_sheet(detailRows)
   wsDetail['!cols'] = [
-    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 45 },
-    { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 44 },
+    { wch: 48 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
   ]
+  styleSheet(wsDetail, { centeredCols: [1, 2, 7], accentCols: [3], boldCols: [0] })
 
-  // ── Sheet 2: one row per person (summary) ────────────────────────────────────
+  // ── Sheet 2: Summary (one row per person) ────────────────────────────────
   const summaryRows = sorted.map(e => ({
-    'Name':              getName(e.userId),
-    'Role':              getRole(e.userId),
-    'Week':              e.weekStart,
-    'Projects (#)':      (e.projectsWorked || []).length,
-    'Projects List':     (e.projectsWorked || []).join(' | '),
-    'Accomplished':      e.accomplished || '',
-    'Plans for Next Week': e.nextWeek   || '',
-    'Blockers / Issues': e.blockers     || '',
-    'Submitted':         getDate(e),
+    'Name':                getName(e.userId),
+    'Role':                getRole(e.userId),
+    'Week':                e.weekStart,
+    'Projects (#)':        (e.projectsWorked || []).length,
+    'Projects':            (e.projectsWorked || []).join('  |  '),
+    'Accomplished':        e.accomplished || '',
+    'Plans for Next Week': e.nextWeek     || '',
+    'Blockers / Issues':   e.blockers     || '',
+    'Submitted':           getDate(e),
   }))
 
   const wsSummary = XLSX.utils.json_to_sheet(summaryRows)
   wsSummary['!cols'] = [
-    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 10 },
-    { wch: 40 }, { wch: 50 }, { wch: 40 }, { wch: 30 }, { wch: 14 },
+    { wch: 22 }, { wch: 16 }, { wch: 12 }, { wch: 11 },
+    { wch: 40 }, { wch: 48 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
   ]
+  styleSheet(wsSummary, { centeredCols: [1, 2, 3, 8], boldCols: [0] })
 
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, wsDetail,  'By Project')
