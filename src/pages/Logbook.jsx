@@ -39,6 +39,24 @@ function border() {
   }, {})
 }
 
+function addDetailMerges(ws, sorted) {
+  const merges = []
+  let rowIdx = 1 // row 0 is header
+
+  sorted.forEach(e => {
+    const count = Math.max((e.projectsWorked?.length || 0), 1)
+    if (count > 1) {
+      // Merge: Name(0) Role(1) Week(2) GeneralNotes(5) Plans(6) Blockers(7) Submitted(8)
+      ;[0, 1, 2, 5, 6, 7, 8].forEach(c => {
+        merges.push({ s: { r: rowIdx, c }, e: { r: rowIdx + count - 1, c } })
+      })
+    }
+    rowIdx += count
+  })
+
+  if (merges.length) ws['!merges'] = merges
+}
+
 function styleSheet(ws, { centeredCols = [], accentCols = [], boldCols = [] } = {}) {
   if (!ws['!ref']) return
   const range = XLSX.utils.decode_range(ws['!ref'])
@@ -111,6 +129,7 @@ function exportToExcel({ entries, users, weekLabel, allWeeks }) {
     { wch: 48 }, { wch: 36 }, { wch: 38 }, { wch: 28 }, { wch: 13 },
   ]
   styleSheet(wsDetail, { centeredCols: [1, 2, 8], accentCols: [3], boldCols: [0] })
+  addDetailMerges(wsDetail, sorted)
 
   // ── Sheet 2: Summary (one row per person) ────────────────────────────────
   const summaryRows = sorted.map(e => ({
