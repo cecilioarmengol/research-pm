@@ -13,6 +13,8 @@ import Publications from './pages/Publications'
 import Journals from './pages/Journals'
 import Congresses from './pages/Congresses'
 import PIDashboard from './pages/PIDashboard'
+import Logbook from './pages/Logbook'
+import MyLogbook from './pages/MyLogbook'
 
 function ProtectedRoute({ children, requireRole }) {
   const { user, loading } = useAuth()
@@ -43,6 +45,8 @@ function AppRoutes() {
       <Route path="/publications" element={<ProtectedRoute><Publications /></ProtectedRoute>} />
       <Route path="/journals" element={<ProtectedRoute><Journals /></ProtectedRoute>} />
       <Route path="/congresses" element={<ProtectedRoute><Congresses /></ProtectedRoute>} />
+      <Route path="/logbook"    element={<ProtectedRoute><Logbook /></ProtectedRoute>} />
+      <Route path="/my-logbook" element={<ProtectedRoute><MyLogbook /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

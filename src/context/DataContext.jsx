@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal, mapCongress } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal, mapCongress, mapLogbookEntry } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -21,7 +21,8 @@ function loadDemoState() {
     protocols:   [],
     submissions: [],
     journals:    [],
-    congresses:  [],
+    congresses:     [],
+    logbookEntries: [],
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -119,6 +120,14 @@ function demoReducer(state, action) {
       return { ...state, users: state.users.map(u => u.id === action.payload.id ? { ...u, ...action.payload } : u) }
     case 'DELETE_USER':
       return { ...state, users: state.users.filter(u => u.id !== action.payload.id) }
+    case 'TOGGLE_LOGBOOK_ACCESS':
+      return { ...state, users: state.users.map(u => u.id === action.payload.userId ? { ...u, logbookEnabled: action.payload.enabled } : u) }
+    case 'ADD_LOGBOOK_ENTRY':
+    case 'UPDATE_LOGBOOK_ENTRY': {
+      const existing = (state.logbookEntries || []).find(e => e.userId === action.payload.userId && e.weekStart === action.payload.weekStart)
+      if (existing) return { ...state, logbookEntries: state.logbookEntries.map(e => e.id === existing.id ? { ...e, ...action.payload, updatedAt: new Date().toISOString() } : e) }
+      return { ...state, logbookEntries: [...(state.logbookEntries || []), { id: uid(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ...action.payload }] }
+    }
     default: return state
   }
 }
@@ -132,9 +141,10 @@ function useSupabaseData(user) {
   const [protocols,   setProtocols]   = useState([])
   const [submissions, setSubmissions] = useState([])
   const [journals,    setJournals]    = useState([])
-  const [congresses,  setCongresses]  = useState([])
-  const [users,        setUsers]        = useState([])
-  const [loading,      setLoading]      = useState(true)
+  const [congresses,     setCongresses]     = useState([])
+  const [logbookEntries, setLogbookEntries] = useState([])
+  const [users,          setUsers]          = useState([])
+  const [loading,        setLoading]        = useState(true)
 
   useEffect(() => {
     if (!user) return
@@ -149,8 +159,9 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'protocols' },          () => loadProtocols())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_submissions' },() => loadSubmissions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' },            () => loadJournals())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'congresses' },          () => loadCongresses())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },            () => loadUsers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'congresses' },      () => loadCongresses())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logbook_entries' }, () => loadLogbookEntries())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },        () => loadUsers())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -158,7 +169,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadCongresses(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadCongresses(), loadLogbookEntries(), loadUsers()])
     setLoading(false)
   }
 
@@ -193,6 +204,10 @@ function useSupabaseData(user) {
   async function loadCongresses() {
     const { data } = await supabase.from('congresses').select('*').order('start_date', { ascending: true, nullsFirst: false })
     if (data) setCongresses(data.map(mapCongress))
+  }
+  async function loadLogbookEntries() {
+    const { data } = await supabase.from('logbook_entries').select('*').order('week_start', { ascending: false })
+    if (data) setLogbookEntries(data.map(mapLogbookEntry))
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -524,11 +539,30 @@ function useSupabaseData(user) {
         await loadUsers()
         break
 
+      case 'TOGGLE_LOGBOOK_ACCESS':
+        await supabase.from('profiles').update({ logbook_enabled: action.payload.enabled }).eq('id', action.payload.userId)
+        await loadUsers()
+        break
+
+      case 'ADD_LOGBOOK_ENTRY':
+      case 'UPDATE_LOGBOOK_ENTRY':
+        await supabase.from('logbook_entries').upsert({
+          user_id:         action.payload.userId || user.id,
+          week_start:      action.payload.weekStart,
+          projects_worked: action.payload.projectsWorked || [],
+          accomplished:    action.payload.accomplished    || '',
+          next_week:       action.payload.nextWeek        || '',
+          blockers:        action.payload.blockers        || '',
+          updated_at:      new Date().toISOString(),
+        }, { onConflict: 'user_id,week_start' })
+        await loadLogbookEntries()
+        break
+
       default: break
     }
   }
 
-  return { projects, stages, tasks, comments, protocols, submissions, journals, congresses, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, submissions, journals, congresses, logbookEntries, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

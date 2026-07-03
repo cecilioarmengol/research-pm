@@ -81,13 +81,26 @@ export const mapProtocol = p => ({
 })
 
 export const mapUser = u => ({
-  id:          u.id,
-  email:       u.email,
-  name:        u.full_name || u.email?.split('@')[0] || 'Unknown',
-  role:        u.role || 'student',
-  initials:    u.initials || (u.full_name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
-  orcid:       u.orcid       || '',
-  affiliation: u.affiliation || '',
+  id:             u.id,
+  email:          u.email,
+  name:           u.full_name || u.email?.split('@')[0] || 'Unknown',
+  role:           u.role || 'student',
+  initials:       u.initials || (u.full_name || '??').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+  orcid:          u.orcid           || '',
+  affiliation:    u.affiliation     || '',
+  logbookEnabled: u.logbook_enabled || false,
+})
+
+export const mapLogbookEntry = e => ({
+  id:             e.id,
+  userId:         e.user_id,
+  weekStart:      e.week_start,
+  projectsWorked: e.projects_worked || [],
+  accomplished:   e.accomplished    || '',
+  nextWeek:       e.next_week       || '',
+  blockers:       e.blockers        || '',
+  createdAt:      e.created_at,
+  updatedAt:      e.updated_at,
 })
 
 export const mapJournal = j => ({

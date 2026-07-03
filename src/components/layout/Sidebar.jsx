@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   LayoutDashboard, Users, BookUser, ClipboardList,
-  Brain, LogOut, BookOpen, Library, LayoutGrid, Globe,
+  Brain, LogOut, BookOpen, Library, LayoutGrid, Globe, BookText,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import Avatar from '../ui/Avatar'
@@ -10,9 +10,10 @@ const navItems = [
   { to: '/',             label: 'Dashboard',    icon: LayoutDashboard, roles: ['admin', 'research_fellow', 'student'] },
   { to: '/team',         label: 'Directory',    icon: BookUser,        roles: ['admin', 'research_fellow'] },
   { to: '/protocols',    label: 'Protocols',    icon: ClipboardList,   roles: ['admin', 'research_fellow'] },
-  { to: '/publications', label: 'Publications', icon: BookOpen, roles: ['admin', 'research_fellow'] },
+  { to: '/publications', label: 'Publications', icon: BookOpen,        roles: ['admin', 'research_fellow'] },
   { to: '/journals',     label: 'Journals',     icon: Library },
   { to: '/congresses',   label: 'Congresses',   icon: Globe   },
+  { to: '/logbook',      label: 'Logbook',      icon: BookText,        roles: ['admin'] },
 ]
 
 const piNavItems = [
@@ -20,6 +21,7 @@ const piNavItems = [
   { to: '/team',         label: 'Directory',   icon: BookUser   },
   { to: '/journals',     label: 'Journals',    icon: Library    },
   { to: '/congresses',   label: 'Congresses',  icon: Globe      },
+  { to: '/logbook',      label: 'Logbook',     icon: BookText   },
 ]
 
 const adminItems = [
@@ -70,6 +72,12 @@ export default function Sidebar() {
                 <span>{label}</span>
               </NavLink>
             ))}
+            {user?.logbookEnabled && !['admin', 'pi'].includes(user?.role) && (
+              <NavLink to="/my-logbook" className={linkClass}>
+                <BookText size={18} className="shrink-0" />
+                <span>My Logbook</span>
+              </NavLink>
+            )}
             {user?.role === 'admin' && (
               <>
                 <p className="text-slate-600 text-xs uppercase font-semibold tracking-wider px-3 mb-2 mt-5">Admin</p>

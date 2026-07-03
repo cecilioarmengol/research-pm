@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, LayoutGrid, Library, Globe, UserCircle,
-  Menu, X, BookUser, ClipboardList, BookOpen, LogOut, ChevronRight,
+  Menu, X, BookUser, ClipboardList, BookOpen, LogOut, ChevronRight, BookText,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
@@ -50,7 +50,14 @@ export default function BottomNav() {
 
   const role = user?.role || 'default'
   const barItems = BAR_ITEMS[role] || BAR_ITEMS.default
-  const moreItems = MORE_ITEMS[role] || []
+  const moreItemsBase = MORE_ITEMS[role] || []
+  const logbookItem = user?.logbookEnabled && !['admin', 'pi'].includes(role)
+    ? [{ to: '/my-logbook', label: 'My Logbook', icon: BookText }]
+    : []
+  const logbookAdminItem = ['admin', 'pi'].includes(role)
+    ? [{ to: '/logbook', label: 'Logbook', icon: BookText }]
+    : []
+  const moreItems = [...moreItemsBase, ...logbookItem, ...logbookAdminItem]
 
   const linkClass = ({ isActive }) =>
     `flex flex-col items-center gap-0.5 px-3 py-2 text-xs font-medium transition-colors rounded-lg ${
