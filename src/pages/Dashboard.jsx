@@ -432,54 +432,75 @@ function PublicationsChart({ projects }) {
 function FellowOfMonth({ fellow, users, isAdmin, onEdit }) {
   const featuredUser = fellow?.userId ? users.find(u => u.id === fellow.userId) : null
   return (
-    <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-indigo-600 rounded-2xl p-5 text-white flex flex-col h-full min-h-64">
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-1.5">
-          <Star size={13} className="text-yellow-300 fill-yellow-300" />
-          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">Fellow of the Month</span>
-        </div>
-        {isAdmin && (
-          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/60 hover:text-white">
-            <Pencil size={13} />
-          </button>
-        )}
-      </div>
+    <div className="relative bg-gradient-to-b from-brand-600 to-indigo-700 rounded-2xl overflow-hidden text-white flex flex-col h-full min-h-96">
 
+      {/* Photo — fills top of card */}
       {featuredUser ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
-          {fellow.photoUrl ? (
-            <img src={fellow.photoUrl} alt={featuredUser.name}
-              className="w-40 h-40 rounded-full object-cover ring-4 ring-white/30" />
-          ) : (
-            <div className="w-40 h-40 rounded-full bg-white/20 ring-4 ring-white/30 flex items-center justify-center text-5xl font-bold">
-              {featuredUser.initials}
+        <>
+          <div className="relative w-full aspect-square">
+            {fellow.photoUrl ? (
+              <img src={fellow.photoUrl} alt={featuredUser.name}
+                className="w-full h-full object-cover object-top" />
+            ) : (
+              <div className="w-full h-full bg-white/10 flex items-center justify-center text-7xl font-bold text-white/60">
+                {featuredUser.initials}
+              </div>
+            )}
+            {/* Gradient overlay at bottom of photo */}
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-indigo-700 to-transparent" />
+          </div>
+
+          {/* Info below photo */}
+          <div className="p-5 flex flex-col gap-2 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Star size={12} className="text-yellow-300 fill-yellow-300" />
+                  <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Fellow of the Month</span>
+                </div>
+                <p className="font-bold text-xl leading-tight">{featuredUser.name}</p>
+                <p className="text-sm text-white/60 capitalize">{featuredUser.role.replace('_', ' ')}</p>
+              </div>
+              {isAdmin && (
+                <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/50 hover:text-white shrink-0">
+                  <Pencil size={13} />
+                </button>
+              )}
             </div>
-          )}
-          <div>
-            <p className="font-bold text-xl leading-tight">{featuredUser.name}</p>
-            <p className="text-sm text-white/60 capitalize mt-0.5">{featuredUser.role.replace('_', ' ')}</p>
+            {fellow.monthLabel && (
+              <span className="text-xs text-white/50 uppercase tracking-wider">
+                {fellow.monthLabel}
+              </span>
+            )}
+            {fellow.comment && (
+              <p className="text-sm text-white/75 italic leading-relaxed">"{fellow.comment}"</p>
+            )}
           </div>
-          {fellow.monthLabel && (
-            <span className="text-xs text-white/50 uppercase tracking-wider border border-white/20 px-2.5 py-0.5 rounded-full">
-              {fellow.monthLabel}
-            </span>
-          )}
-          {fellow.comment && (
-            <p className="text-sm text-white/80 italic leading-relaxed max-w-xs">"{fellow.comment}"</p>
-          )}
-        </div>
+        </>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
-          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
-            <Star size={24} className="text-white/30" />
+        <div className="flex-1 flex flex-col">
+          <div className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Star size={12} className="text-yellow-300 fill-yellow-300" />
+              <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Fellow of the Month</span>
+            </div>
+            {isAdmin && (
+              <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/50 hover:text-white">
+                <Pencil size={13} />
+              </button>
+            )}
           </div>
-          <p className="text-sm font-medium text-white/50">No fellow featured yet</p>
-          {isAdmin && (
-            <button onClick={onEdit}
-              className="text-xs text-white/50 underline hover:text-white/80 transition-colors">
-              Feature someone
-            </button>
-          )}
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 p-6">
+            <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
+              <Star size={28} className="text-white/30" />
+            </div>
+            <p className="text-sm font-medium text-white/50">No fellow featured yet</p>
+            {isAdmin && (
+              <button onClick={onEdit} className="text-xs text-white/50 underline hover:text-white/80 transition-colors">
+                Feature someone
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
