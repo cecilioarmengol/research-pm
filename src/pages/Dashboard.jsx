@@ -456,7 +456,7 @@ function FellowOfMonth({ fellow, users, isAdmin, onEdit }) {
               <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <Star size={12} className="text-yellow-300 fill-yellow-300" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Fellow of the Month</span>
+                  <span className="text-sm font-bold uppercase tracking-widest text-white/70">Fellow of the Month</span>
                 </div>
                 <p className="font-bold text-xl leading-tight">{featuredUser.name}</p>
                 <p className="text-sm text-white/60 capitalize">{featuredUser.role.replace('_', ' ')}</p>
@@ -482,7 +482,7 @@ function FellowOfMonth({ fellow, users, isAdmin, onEdit }) {
           <div className="p-4 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <Star size={12} className="text-yellow-300 fill-yellow-300" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Fellow of the Month</span>
+              <span className="text-sm font-bold uppercase tracking-widest text-white/70">Fellow of the Month</span>
             </div>
             {isAdmin && (
               <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/50 hover:text-white">
