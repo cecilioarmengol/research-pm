@@ -493,24 +493,31 @@ function FellowEditModal({ fellow, users, onSave, onClose }) {
     monthLabel: fellow?.monthLabel || format(new Date(), 'MMMM yyyy'),
     photoUrl:   fellow?.photoUrl   || null,
   })
-  const [uploading, setUploading] = useState(false)
-  const [saving,    setSaving]    = useState(false)
+  const [uploading,   setUploading]   = useState(false)
+  const [uploadError, setUploadError] = useState(null)
+  const [saving,      setSaving]      = useState(false)
   const fileRef = useRef(null)
 
   async function handlePhotoUpload(e) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
+    setUploadError(null)
     try {
       const ext  = file.name.split('.').pop()
       const path = `fellow_${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('fellows').upload(path, file, { upsert: true })
-      if (!error) {
+      if (error) {
+        setUploadError(error.message)
+      } else {
         const { data: { publicUrl } } = supabase.storage.from('fellows').getPublicUrl(path)
         setForm(f => ({ ...f, photoUrl: publicUrl }))
       }
+    } catch (err) {
+      setUploadError(err.message || 'Upload failed')
     } finally {
       setUploading(false)
+      e.target.value = ''
     }
   }
 
@@ -566,6 +573,9 @@ function FellowEditModal({ fellow, users, onSave, onClose }) {
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
         </div>
+        {uploadError && (
+          <p className="text-xs text-red-500 mt-1">{uploadError}</p>
+        )}
       </div>
 
       <div className="flex gap-3 pt-2">
