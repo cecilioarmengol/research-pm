@@ -449,9 +449,9 @@ function FellowOfMonth({ fellow, users, isAdmin, onEdit }) {
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
           {fellow.photoUrl ? (
             <img src={fellow.photoUrl} alt={featuredUser.name}
-              className="w-24 h-24 rounded-full object-cover ring-4 ring-white/30" />
+              className="w-40 h-40 rounded-full object-cover ring-4 ring-white/30" />
           ) : (
-            <div className="w-24 h-24 rounded-full bg-white/20 ring-4 ring-white/30 flex items-center justify-center text-3xl font-bold">
+            <div className="w-40 h-40 rounded-full bg-white/20 ring-4 ring-white/30 flex items-center justify-center text-5xl font-bold">
               {featuredUser.initials}
             </div>
           )}
