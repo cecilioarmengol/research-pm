@@ -127,6 +127,16 @@ export const mapJournal = j => ({
   updatedAt:       j.updated_at,
 })
 
+export const mapFeaturedFellow = f => ({
+  id:         f.id,
+  userId:     f.user_id,
+  comment:    f.comment    || '',
+  monthLabel: f.month_label || '',
+  photoUrl:   f.photo_url  || null,
+  createdBy:  f.created_by,
+  updatedAt:  f.updated_at,
+})
+
 export const mapCongress = c => ({
   id:               c.id,
   name:             c.name,

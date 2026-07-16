@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useState } from 'react'
-import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal, mapCongress, mapLogbookEntry } from '../lib/supabase'
+import { supabase, DEMO_MODE, mapProject, mapStage, mapTask, mapComment, mapUser, mapProtocol, mapSubmission, mapJournal, mapCongress, mapLogbookEntry, mapFeaturedFellow } from '../lib/supabase'
 import { buildInitialData, DEMO_USERS, SEED_COMMENTS } from '../lib/mockData'
 import { calculateProgress, uid } from '../lib/utils'
 import { DEFAULT_TASKS, STAGES } from '../lib/constants'
@@ -23,6 +23,7 @@ function loadDemoState() {
     journals:    [],
     congresses:     [],
     logbookEntries: [],
+    featuredFellow: null,
     users: DEMO_USERS.map(({ password: _pw, ...u }) => u),
   }
 }
@@ -130,6 +131,8 @@ function demoReducer(state, action) {
     }
     case 'DELETE_LOGBOOK_ENTRY':
       return { ...state, logbookEntries: (state.logbookEntries || []).filter(e => e.id !== action.payload.id) }
+    case 'SET_FEATURED_FELLOW':
+      return { ...state, featuredFellow: action.payload.userId ? { id: uid(), ...action.payload, updatedAt: new Date().toISOString() } : null }
     default: return state
   }
 }
@@ -144,9 +147,10 @@ function useSupabaseData(user) {
   const [submissions, setSubmissions] = useState([])
   const [journals,    setJournals]    = useState([])
   const [congresses,     setCongresses]     = useState([])
-  const [logbookEntries, setLogbookEntries] = useState([])
-  const [users,          setUsers]          = useState([])
-  const [loading,        setLoading]        = useState(true)
+  const [logbookEntries,  setLogbookEntries]  = useState([])
+  const [featuredFellow,  setFeaturedFellow]  = useState(null)
+  const [users,           setUsers]           = useState([])
+  const [loading,         setLoading]         = useState(true)
 
   useEffect(() => {
     if (!user) return
@@ -162,8 +166,9 @@ function useSupabaseData(user) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_submissions' },() => loadSubmissions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' },            () => loadJournals())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'congresses' },      () => loadCongresses())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'logbook_entries' }, () => loadLogbookEntries())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },        () => loadUsers())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'logbook_entries' },  () => loadLogbookEntries())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'featured_fellow' },  () => loadFeaturedFellow())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' },         () => loadUsers())
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -171,7 +176,7 @@ function useSupabaseData(user) {
 
   async function loadAll() {
     setLoading(true)
-    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadCongresses(), loadLogbookEntries(), loadUsers()])
+    await Promise.all([loadProjects(), loadStages(), loadTasks(), loadComments(), loadProtocols(), loadSubmissions(), loadJournals(), loadCongresses(), loadLogbookEntries(), loadFeaturedFellow(), loadUsers()])
     setLoading(false)
   }
 
@@ -210,6 +215,10 @@ function useSupabaseData(user) {
   async function loadLogbookEntries() {
     const { data } = await supabase.from('logbook_entries').select('*').order('week_start', { ascending: false })
     if (data) setLogbookEntries(data.map(mapLogbookEntry))
+  }
+  async function loadFeaturedFellow() {
+    const { data } = await supabase.from('featured_fellow').select('*').limit(1).maybeSingle()
+    setFeaturedFellow(data ? mapFeaturedFellow(data) : null)
   }
   async function loadUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -566,11 +575,26 @@ function useSupabaseData(user) {
         await loadLogbookEntries()
         break
 
+      case 'SET_FEATURED_FELLOW':
+        await supabase.from('featured_fellow').delete().not('id', 'is', null)
+        if (action.payload.userId) {
+          await supabase.from('featured_fellow').insert({
+            user_id:     action.payload.userId,
+            comment:     action.payload.comment     || '',
+            month_label: action.payload.monthLabel  || '',
+            photo_url:   action.payload.photoUrl    || null,
+            created_by:  user.id,
+            updated_at:  new Date().toISOString(),
+          })
+        }
+        await loadFeaturedFellow()
+        break
+
       default: break
     }
   }
 
-  return { projects, stages, tasks, comments, protocols, submissions, journals, congresses, logbookEntries, users, loading, dispatch, reloadUsers: loadUsers }
+  return { projects, stages, tasks, comments, protocols, submissions, journals, congresses, logbookEntries, featuredFellow, users, loading, dispatch, reloadUsers: loadUsers }
 }
 
 // ── Provider ──────────────────────────────────────────────────────────────────

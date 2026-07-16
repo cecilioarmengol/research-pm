@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp, FileText, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Trophy, Clock, FlaskConical, Shield, Calendar, ArrowUpRight, Plus, ChevronDown, ChevronUp, FileText, ChevronLeft, ChevronRight, Star, Pencil, Upload, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { useData } from '../context/DataContext'
@@ -428,12 +428,166 @@ function PublicationsChart({ projects }) {
   )
 }
 
+// ── Fellow of the Month ───────────────────────────────────────────────────────
+function FellowOfMonth({ fellow, users, isAdmin, onEdit }) {
+  const featuredUser = fellow?.userId ? users.find(u => u.id === fellow.userId) : null
+  return (
+    <div className="relative bg-gradient-to-br from-brand-600 via-brand-500 to-indigo-600 rounded-2xl p-5 text-white flex flex-col h-full min-h-64">
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-1.5">
+          <Star size={13} className="text-yellow-300 fill-yellow-300" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-white/70">Fellow of the Month</span>
+        </div>
+        {isAdmin && (
+          <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors text-white/60 hover:text-white">
+            <Pencil size={13} />
+          </button>
+        )}
+      </div>
+
+      {featuredUser ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3">
+          {fellow.photoUrl ? (
+            <img src={fellow.photoUrl} alt={featuredUser.name}
+              className="w-24 h-24 rounded-full object-cover ring-4 ring-white/30" />
+          ) : (
+            <div className="w-24 h-24 rounded-full bg-white/20 ring-4 ring-white/30 flex items-center justify-center text-3xl font-bold">
+              {featuredUser.initials}
+            </div>
+          )}
+          <div>
+            <p className="font-bold text-xl leading-tight">{featuredUser.name}</p>
+            <p className="text-sm text-white/60 capitalize mt-0.5">{featuredUser.role.replace('_', ' ')}</p>
+          </div>
+          {fellow.monthLabel && (
+            <span className="text-xs text-white/50 uppercase tracking-wider border border-white/20 px-2.5 py-0.5 rounded-full">
+              {fellow.monthLabel}
+            </span>
+          )}
+          {fellow.comment && (
+            <p className="text-sm text-white/80 italic leading-relaxed max-w-xs">"{fellow.comment}"</p>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 py-6">
+          <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center">
+            <Star size={24} className="text-white/30" />
+          </div>
+          <p className="text-sm font-medium text-white/50">No fellow featured yet</p>
+          {isAdmin && (
+            <button onClick={onEdit}
+              className="text-xs text-white/50 underline hover:text-white/80 transition-colors">
+              Feature someone
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FellowEditModal({ fellow, users, onSave, onClose }) {
+  const [form, setForm] = useState({
+    userId:     fellow?.userId     || '',
+    comment:    fellow?.comment    || '',
+    monthLabel: fellow?.monthLabel || format(new Date(), 'MMMM yyyy'),
+    photoUrl:   fellow?.photoUrl   || null,
+  })
+  const [uploading, setUploading] = useState(false)
+  const [saving,    setSaving]    = useState(false)
+  const fileRef = useRef(null)
+
+  async function handlePhotoUpload(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const ext  = file.name.split('.').pop()
+      const path = `fellow_${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('fellows').upload(path, file, { upsert: true })
+      if (!error) {
+        const { data: { publicUrl } } = supabase.storage.from('fellows').getPublicUrl(path)
+        setForm(f => ({ ...f, photoUrl: publicUrl }))
+      }
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try { await onSave(form) } finally { setSaving(false) }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="label">Team Member</label>
+        <select className="input-base" value={form.userId}
+          onChange={e => setForm(f => ({ ...f, userId: e.target.value }))}>
+          <option value="">Select a person…</option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>{u.name} ({u.role.replace('_', ' ')})</option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="label">Month</label>
+        <input className="input-base" value={form.monthLabel}
+          onChange={e => setForm(f => ({ ...f, monthLabel: e.target.value }))}
+          placeholder="e.g. July 2026" />
+      </div>
+
+      <div>
+        <label className="label">Recognition note <span className="text-slate-400 font-normal">(optional)</span></label>
+        <textarea className="input-base resize-none" rows={3}
+          value={form.comment}
+          onChange={e => setForm(f => ({ ...f, comment: e.target.value }))}
+          placeholder="Write a short note or quote…" />
+      </div>
+
+      <div>
+        <label className="label">Photo <span className="text-slate-400 font-normal">(optional — uses initials if not set)</span></label>
+        <div className="flex items-center gap-3 mt-1">
+          {form.photoUrl && (
+            <img src={form.photoUrl} alt="" className="w-12 h-12 rounded-full object-cover border border-slate-200 shrink-0" />
+          )}
+          <button type="button" onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-2 text-sm border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+            <Upload size={14} className="text-slate-400" />
+            {uploading ? 'Uploading…' : form.photoUrl ? 'Change photo' : 'Upload photo'}
+          </button>
+          {form.photoUrl && (
+            <button type="button" onClick={() => setForm(f => ({ ...f, photoUrl: null }))}
+              className="text-xs text-red-400 hover:text-red-600 transition-colors">
+              Remove
+            </button>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={uploading} />
+        </div>
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        <button onClick={handleSave} disabled={!form.userId || saving}
+          className="flex-1 py-2 px-4 bg-brand-500 text-white text-sm font-medium rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-50">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+        <button onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors">
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { projects, submissions, protocols, getProjectProgress, getStagesForProject, getUserById, dispatch } = useData()
+  const { projects, submissions, protocols, featuredFellow, getProjectProgress, getStagesForProject, getUserById, users, dispatch } = useData()
   const { user } = useAuth()
-  const [activeModal, setActiveModal] = useState(null)
-  const [showNewProject, setShowNewProject] = useState(false)
+  const [activeModal,     setActiveModal]     = useState(null)
+  const [showNewProject,  setShowNewProject]  = useState(false)
+  const [showFellowEdit,  setShowFellowEdit]  = useState(false)
 
   const today = new Date()
   const canCreate = ['admin', 'pi', 'research_fellow'].includes(user?.role)
@@ -519,7 +673,9 @@ export default function Dashboard() {
         }
       />
 
-      <div className="p-4 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-4xl">
+      <div className="p-4 sm:p-6 flex flex-col lg:flex-row gap-4">
+      <div className="flex-1 min-w-0 space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
 
         {/* Accepted / Published */}
         <button onClick={() => setActiveModal('published')}
@@ -633,10 +789,33 @@ export default function Dashboard() {
 
       </div>
 
-      {/* Publications chart */}
-      <div className="px-4 sm:px-6 pb-4 sm:pb-6 max-w-4xl">
+        {/* Publications chart */}
         <PublicationsChart projects={visibleProjects.filter(p => p.pubStatus === 'accepted' || p.pubStatus === 'published')} />
+      </div>{/* end left column */}
+
+      {/* Fellow of the Month — right column */}
+      <div className="lg:w-72 shrink-0">
+        <FellowOfMonth
+          fellow={featuredFellow}
+          users={users}
+          isAdmin={user?.role === 'admin'}
+          onEdit={() => setShowFellowEdit(true)}
+        />
       </div>
+      </div>{/* end outer flex */}
+
+      {/* Fellow edit modal */}
+      <Modal isOpen={showFellowEdit} onClose={() => setShowFellowEdit(false)} title="Fellow of the Month" size="sm">
+        <FellowEditModal
+          fellow={featuredFellow}
+          users={users}
+          onSave={async (form) => {
+            await dispatch({ type: 'SET_FEATURED_FELLOW', payload: form })
+            setShowFellowEdit(false)
+          }}
+          onClose={() => setShowFellowEdit(false)}
+        />
+      </Modal>
 
       {/* New Project modal */}
       <Modal isOpen={showNewProject} onClose={() => setShowNewProject(false)} title="Create New Project" size="lg">
